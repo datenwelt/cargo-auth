@@ -1,7 +1,10 @@
 const Promise = require('bluebird');
 
-const PEM = require('../../src/lib/pemreader');
+const PEM = require('../../../src/lib/pemreader');
 const fs = Promise.promisifyAll(require('fs'));
+
+const jwt = Promise.promisifyAll(require('jsonwebtoken'));
+const NodeRSA = require('node-rsa');
 
 const chai = require('chai');
 const expect = chai.expect;
@@ -90,7 +93,7 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 	
 	describe("PEMReader.readPrivateKey()", function () {
 		
-		it("reads an unencrypted private key", async function () {
+		it("reads an unencrypted private key", async function() {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.pem');
 			const privkey = PEM.readPrivateKey(data);
 			expect(privkey).to.equal(unencryptedPrivateKey);
@@ -101,7 +104,40 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 			const privkey = PEM.readPrivateKey(data, 'test123456');
 			expect(privkey).to.equal(unencryptedPrivateKey);
 		});
-		
+
+		it("returns a private key usable by module 'jsonwebtokens'", async function() {
+			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
+			const privkey = PEM.readPrivateKey(data, 'test123456');
+			await jwt.sign({}, privkey, {
+				expiresIn: "1d",
+				subject: "cargo-auth",
+				algorithm: "RS256"
+			});
+
+		});
+
+		it("returns a private key usable by module 'node-rsa'", async function() {
+			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
+			const privkey = PEM.readPrivateKey(data, 'test123456');
+			const key = new NodeRSA();
+			key.importKey(privkey, 'private');
+		});
+
+		it("returns a private key usable by module 'node-rsa' for verification of JWTs", async function() {
+			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
+			const privkey = PEM.readPrivateKey(data, 'test123456');
+			const key = new NodeRSA(privkey);
+			const pubkey = key.exportKey('public');
+			const token = await jwt.sign({}, privkey, {
+				expiresIn: "1d",
+				subject: "cargo-auth",
+				algorithm: "RS256"
+			});
+			const payload = await jwt.verify(token, pubkey, {algorithm: 'RS256'});
+			expect(payload.sub).to.equal("cargo-auth");
+		});
+
+
 	});
 	
 });

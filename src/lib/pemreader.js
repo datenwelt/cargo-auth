@@ -190,6 +190,14 @@ const PEMReader = {
 		return { key: key, iv: iv};
 	},
 	
+	/**
+	 * Reads a PEM-encoded RSA private key from a buffer or string. It searches for the begin marker
+	 * "-----BEGIN RSA PRIVATE KEY----" and returns everything from there to the end marker. If the
+	 * private key is encrypted, the decrypted version is returned.
+	 *
+	 * @param {(string|Buffer)} bufferOrString The string or Buffer containing the private key.
+	 * @param {string} [passphrase] An optional passphrase for descrpytion.
+	 */
 	readPrivateKey: function (bufferOrString, passphrase) {
 		let input = bufferOrString;
 		if (Buffer.isBuffer(bufferOrString)) {
@@ -230,7 +238,7 @@ const PEMReader = {
 			const iv = Buffer.from(matches[2], 'hex');
 			
 			// Skip to end of header.
-			while (line = parser.readline()) {
+			while ((line = parser.readline()) !== null) {
 				if (line === "") break;
 			}
 			if (line !== "") {
@@ -241,7 +249,7 @@ const PEMReader = {
 			let decipher = crypto.createDecipheriv(algo, keyBuffer, iv);
 			
 			let data = "";
-			while (line = parser.readline()) {
+			while ((line = parser.readline()) !== null) {
 				if (line.startsWith(END_RSA_PRIVATE_KEY)) break;
 				data += decipher.update(line, 'base64', 'base64');
 			}
@@ -259,7 +267,7 @@ const PEMReader = {
 		} else {
 			// Unencrypted private key.
 			privateKey += "\n" + line + "\n";
-			while (line = parser.readline()) {
+			while ((line = parser.readline()) !== null) {
 				privateKey += line;
 				if (line.startsWith(END_RSA_PRIVATE_KEY)) {
 					break;
@@ -270,9 +278,6 @@ const PEMReader = {
 				throw new VError('Missing %s after %s ', END_RSA_PRIVATE_KEY, BEGIN_RSA_PRIVATE_KEY);
 		}
 		return privateKey;
-	},
-	readPublicKey: function (buffer) {
-	
 	}
 	
 };

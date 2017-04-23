@@ -1,0 +1,6 @@
+version: '3'
+services:
+  cargo-auth-mysql:
+    build: ./mysql
+    ports:
+      - "13701:3306"
