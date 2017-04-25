@@ -7,10 +7,12 @@ const jwt = Promise.promisifyAll(require('jsonwebtoken'));
 const NodeRSA = require('node-rsa');
 
 const chai = require('chai');
+const it = require("mocha").it;
+const describe = require("mocha").describe;
 const expect = chai.expect;
 
 describe("lib/pemreader.js", function () {
-	
+
 	const unencryptedPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0ukwklDp1CUNOhZCraBZ8vT8EKVvXFNbJtkrX+tBF2zFckw8
 l099Gx+lab8nklsvY8nh/odUMIOv8tvm+tDUDe7kMkkgKsgREnn0mQQj3uU9KzxL
@@ -38,9 +40,9 @@ X8hbAoGBAL2qMbG/kxTE3f8jdnn7z9MoZZism0JzlGXx0q81hXRruRiGDZ5hJyLv
 tq0LbuT1N38IOpBDtqfMHlHHk9SRK/Mx0b6a0uATSb+1TYIZdgF3wdKmm9h4dVdy
 Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 -----END RSA PRIVATE KEY-----`;
-	
+
 	describe("PEMReader.evpBytesToKey()", function () {
-		
+
 		it("generates the expected key and IV for AES-128-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
@@ -48,64 +50,71 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254');
 			expect(iv.toString('hex')).to.equal('fa5277af059220de3ca0f9a2d2c30a1d');
 		});
-		
+
 		it("generates the expected key and IV for AES-192-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const { key, iv } = PEM.evpBytesToKey(passphrase, {cipher: 'AES-192-CBC', salt: salt});
+			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'AES-192-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254fa5277af059220de');
 			expect(iv.toString('hex')).to.equal('3ca0f9a2d2c30a1da0ed7665f278bdd6');
 		});
-		
+
 		it("generates the expected key and IV for AES-256-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const { key, iv } = PEM.evpBytesToKey(passphrase, {cipher: 'AES-256-CBC', salt: salt});
+			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'AES-256-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254fa5277af059220de3ca0f9a2d2c30a1d');
 			expect(iv.toString('hex')).to.equal('a0ed7665f278bdd69710ed632cb3917d');
 		});
-		
+
 		it("generates the expected key and IV for DES-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const { key, iv } = PEM.evpBytesToKey(passphrase, {cipher: 'DES-CBC', salt: salt});
+			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'DES-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2dd');
 			expect(iv.toString('hex')).to.equal('be5a19c8f1e08254');
 		});
-		
+
 		it("generates the expected key and IV for DES-EDE3-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const { key, iv } = PEM.evpBytesToKey(passphrase, {cipher: 'DES-EDE3-CBC', salt: salt});
+			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'DES-EDE3-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254fa5277af059220de');
 			expect(iv.toString('hex')).to.equal('3ca0f9a2d2c30a1d');
 		});
-		
+
 		it("generates the expected key and IV for arbitrary key and IV sizes with an alternative hash", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const { key, iv } = PEM.evpBytesToKey(passphrase, {cipher: 'DES-EDE3-CBC', salt: salt, keyLength: 64, ivLength: 30, count: 10, hash: 'SHA1'});
+			const {key, iv} = PEM.evpBytesToKey(passphrase, {
+				cipher: 'DES-EDE3-CBC',
+				salt: salt,
+				keyLength: 64,
+				ivLength: 30,
+				count: 10,
+				hash: 'SHA1'
+			});
 			expect(key.toString('hex')).to.equal('9e6e11a8015ba3bc13f0c58bdd286fd9a9128269a6f623accbd2678eec6f5a6d95ab375ebeb002a36fa662ade4132494f9895c21c4a9b73527b00390de1cf405');
 			expect(iv.toString('hex')).to.equal('43f447d993863c59cab29e3cf64d6d457b495feb2db635b8884286b61a40');
 		});
-		
+
 	});
-	
+
 	describe("PEMReader.readPrivateKey()", function () {
-		
-		it("reads an unencrypted private key", async function() {
+
+		it("reads an unencrypted private key", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.pem');
 			const privkey = PEM.readPrivateKey(data);
 			expect(privkey).to.equal(unencryptedPrivateKey);
 		});
-		
+
 		it("reads an encrypted private key", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
 			const privkey = PEM.readPrivateKey(data, 'test123456');
 			expect(privkey).to.equal(unencryptedPrivateKey);
 		});
 
-		it("returns a private key usable by module 'jsonwebtokens'", async function() {
+		it("returns a private key usable by module 'jsonwebtokens'", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
 			const privkey = PEM.readPrivateKey(data, 'test123456');
 			await jwt.sign({}, privkey, {
@@ -116,19 +125,27 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 
 		});
 
-		it("returns a private key usable by module 'node-rsa'", async function() {
+		it("returns a private key usable by module 'node-rsa'", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
 			const privkey = PEM.readPrivateKey(data, 'test123456');
 			const key = new NodeRSA();
 			key.importKey(privkey, 'private');
 		});
 
-		it("returns a private key usable by module 'node-rsa' for verification of JWTs", async function() {
+		it("returns a private key usable by module 'node-rsa' for verification of JWTs", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
 			const privkey = PEM.readPrivateKey(data, 'test123456');
 			const key = new NodeRSA(privkey);
 			const pubkey = key.exportKey('public');
-			const token = await jwt.sign({}, privkey, {
+			const token = await jwt.sign({
+				pbm: {
+					ver: "1b5de",
+					val: "ffff"
+				},
+				usr: "job",
+				org: "1",
+				rnw: "100448484848"
+			}, privkey, {
 				expiresIn: "1d",
 				subject: "cargo-auth",
 				algorithm: "RS256"
@@ -139,5 +156,5 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 
 
 	});
-	
+
 });

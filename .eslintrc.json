@@ -5,7 +5,7 @@
   "extends": "eslint:recommended",
   "parserOptions": {
     "sourceType": "module",
-    "ecmaVersion": 7,
+    "ecmaVersion": 8,
     "ecmaFeatures": {}
   },
   "rules": {
@@ -46,7 +46,7 @@
     "consistent-this": "error",
     "curly": "off",
     "default-case": "error",
-    "dot-location": "error",
+    "dot-location": "off",
     "dot-notation": [
       "error",
       {
@@ -105,7 +105,7 @@
     "new-parens": "error",
     "newline-after-var": "off",
     "newline-before-return": "off",
-    "newline-per-chained-call": "error",
+    "newline-per-chained-call": ["off", { "ignoreChainWithDepth": 2 }],
     "no-alert": "error",
     "no-array-constructor": "error",
     "no-await-in-loop": "error",
@@ -208,7 +208,7 @@
       "error",
       "any"
     ],
-    "object-curly-newline": ["error", { "multiline": true, "minProperties": 2 }],
+    "object-curly-newline": "off",
     "object-curly-spacing": "off",
     "object-property-newline": [
       "error",
@@ -236,7 +236,7 @@
     ],
     "prefer-numeric-literals": "error",
     "prefer-promise-reject-errors": "error",
-    "prefer-reflect": "error",
+    "prefer-reflect": "off",
     "prefer-rest-params": "error",
     "prefer-spread": "error",
     "prefer-template": "off",

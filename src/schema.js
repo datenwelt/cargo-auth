@@ -12,29 +12,56 @@ const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
 const UserPermission = require('./schema/user-permission');
 
+let schema = null;
+
+function Schema(sequelize, uri) {
+	this.sequelize = sequelize;
+	this.uri = uri;
+}
+
+Schema.prototype.constructor = Schema;
+
+Schema.prototype.model = function(name) {
+	return this.sequelize.model(name);
+};
+
+
 module.exports = {
 
-	init: async function (uri, options) {
-		const schema = new Sequelize(uri, {
+	get: function() {
+		if (!schema)
+			throw new Error('Schema is not initialized yet. Call schema.init() before use.');
+		return schema;
+	},
+
+	init: async function(uri, options) {
+		if (schema) return schema;
+		const config = Object.assign({
+			drop: false,
+			sync: false
+		}, options || {});
+
+		const sequelize = new Sequelize(uri, {
 			define: {
 				timestamps: false,
 				underscored: true,
 				underscoredAll: true,
 			},
-			timezone: 'Europe/Berlin'
+			timezone: 'Europe/Berlin',
+			logging: false
 		});
 
-		const Organizations = Organization.define(schema);
-		const Roles = Role.define(schema);
-		const Groups = Group.define(schema);
-		const Permissions = Permission.define(schema);
-		const GroupPermissions = GroupPermission.define(schema);
-		const GroupRoles = GroupRole.define(schema);
-		const RolePermissions = RolePermission.define(schema);
-		const Users = User.define(schema);
-		const UserGroups = UserGroup.define(schema);
-		const UserRoles = UserRole.define(schema);
-		const UserPermissions = UserPermission.define(schema);
+		const Organizations = Organization.define(sequelize);
+		const Roles = Role.define(sequelize);
+		const Groups = Group.define(sequelize);
+		const Permissions = Permission.define(sequelize);
+		const GroupPermissions = GroupPermission.define(sequelize);
+		const GroupRoles = GroupRole.define(sequelize);
+		const RolePermissions = RolePermission.define(sequelize);
+		const Users = User.define(sequelize);
+		const UserGroups = UserGroup.define(sequelize);
+		const UserRoles = UserRole.define(sequelize);
+		const UserPermissions = UserPermission.define(sequelize);
 
 		Organizations.hasMany(Users);
 		Organizations.hasMany(Groups);
@@ -53,17 +80,17 @@ module.exports = {
 		Users.belongsToMany(Roles, {through: UserRoles});
 		Users.belongsToMany(Permissions, {through: UserPermissions});
 
-		if ( options.drop ) {
-			await schema.drop();
+		if (config.drop) {
+			await sequelize.drop();
 		}
 
-		await schema.sync( { force: options.force });
+		await sequelize.sync({force: config.force});
 
 		await Organizations.findOrCreate({
 			where: {name: 'PUBLIC'},
-			defaults: {name:'PUBLIC'}
+			defaults: {name: 'PUBLIC'}
 		});
-
+		schema = new Schema(sequelize, uri);
 		return schema;
 	}
 

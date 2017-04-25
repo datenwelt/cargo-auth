@@ -14,6 +14,12 @@ module.exports = {
 				type: Sequelize.STRING,
 				allowNull: false,
 				comment: 'Name of the organization.'
+			},
+			shortName: {
+				field: 'short_name',
+				// eslint-disable-next-line new-cap
+				type: Sequelize.STRING(40),
+
 			}
 		});
 	}

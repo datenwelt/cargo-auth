@@ -65,9 +65,7 @@ crashlytics-build.properties
 fabric.properties
 ### NetBeans template
 nbproject/private/
-build/
 nbbuild/
-dist/
 nbdist/
 .nb-gradle/
 ### Xcode template
@@ -92,7 +90,6 @@ xcuserdata/
 ## Other
 *.moved-aside
 *.xccheckout
-*.xcscmblueprint
 ### Cloud9 template
 # Cloud9 IDE - http://c9.io
 .c9revisions
@@ -100,7 +97,6 @@ xcuserdata/
 ### Eclipse template
 
 .metadata
-bin/
 tmp/
 *.tmp
 *.bak
@@ -172,14 +168,10 @@ pids
 lib-cov
 
 # Coverage directory used by tools like istanbul
-coverage
-
 # nyc test coverage
 .nyc_output
 
 # Grunt intermediate storage (http://gruntjs.com/creating-plugins#storing-task-files)
-.grunt
-
 # Bower dependency directory (https://bower.io/)
 bower_components
 
@@ -192,9 +184,6 @@ build/Release
 # Dependency directories
 node_modules/
 jspm_packages/
-
-# Typescript v1 declaration files
-typings/
 
 # Optional npm cache directory
 .npm
@@ -255,3 +244,4 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
+!/src/schema.js

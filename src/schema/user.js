@@ -25,6 +25,12 @@ module.exports = {
 				type: Sequelize.STRING,
 				allowNull: false,
 				comment: 'Email address of the user for password recovery.'
+			},
+			active: {
+				type: Sequelize.BOOLEAN,
+				allowNull: false,
+				defaultValue: true,
+				comment: 'True if user can login, false if user login is temporarily deactivated.'
 			}
 		});
 	}
