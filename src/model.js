@@ -3,10 +3,9 @@ const VError = require('verror');
 
 class Model extends EventEmitter {
 
-	constructor(name, schema) {
+	constructor(name) {
 		super();
 		this.name = name;
-		this.schema = schema;
 	}
 
 	error(err, cause) {

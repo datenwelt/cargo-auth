@@ -7,27 +7,26 @@ const it = require("mocha").it;
 const before = require("mocha").before;
 const describe = require("mocha").describe;
 
+const utils = require('./utils/schema');
+
 describe('schema.js', function() {
 
-	const DB = "mysql://cargo:chieshoaC8Ingoob@localhost:13701/cargo_auth?connectTimeout=1000";
+	// const DB = "mysql://cargo:chieshoaC8Ingoob@localhost:13701/cargo_auth?connectTimeout=1000";
 
-	let connection = null;
+	let skip = null;
 
 	before(async function() {
-		try {
-			connection = await mysql.createConnection(DB);
-		} catch (err) {
-			connection = null;
-		}
-		return true;
+		skip = await utils.assertDb();
 	});
 
 	describe('Schema.init()', function() {
 
 		it("defines the schema", async function() {
-			if ( !connection ) return this.skip();
-			const schema = await Schema.init(DB, { drop: true });
-			assert.isDefined(schema.models);
+			if ( !skip ) return this.skip();
+			const schema = await Schema.init(null, { drop: true });
+			assert.instanceOf(schema, Schema);
+			assert.isDefined(schema.uri);
+			assert.isDefined(schema.sequelize);
 			return true;
 		});
 	});

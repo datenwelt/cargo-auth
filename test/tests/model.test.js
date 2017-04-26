@@ -6,7 +6,7 @@ const assert = require("chai").assert;
 
 const Model = require("../../src/model");
 
-describe.only('model.js', function () {
+describe('model.js', function () {
 
 	describe("static createError()", function () {
 
@@ -19,7 +19,6 @@ describe.only('model.js', function () {
 			assert.strictEqual(err.code, "ERR_TEST_ERROR");
 		});
 
-
 	});
 
 	describe("constructor", function () {
@@ -29,7 +28,6 @@ describe.only('model.js', function () {
 			assert.instanceOf(model, Model);
 			assert.instanceOf(model, EventEmitter);
 			assert.strictEqual(model.name, "io.cargohub.test");
-			assert.strictEqual(model.schema, "SOME_SCHEMA");
 		});
 
 	});

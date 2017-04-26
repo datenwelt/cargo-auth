@@ -1,4 +1,6 @@
+const process = require('process');
 const Sequelize = require('sequelize');
+const URI = require('urijs');
 
 const Group = require('./schema/group');
 const GroupPermission = require('./schema/group-permission');
@@ -7,6 +9,7 @@ const Organization = require('./schema/organization');
 const Permission = require('./schema/permission');
 const Role = require('./schema/role');
 const RolePermission = require('./schema/role-permission');
+const Setting = require('./schema/setting');
 const User = require('./schema/user');
 const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
@@ -14,28 +17,61 @@ const UserPermission = require('./schema/user-permission');
 
 let schema = null;
 
-function Schema(sequelize, uri) {
-	this.sequelize = sequelize;
-	this.uri = uri;
-}
+class Schema {
 
-Schema.prototype.constructor = Schema;
+	constructor(sequelize, uri) {
+		this.sequelize = sequelize;
+		this.uri = uri;
+	}
 
-Schema.prototype.model = function(name) {
-	return this.sequelize.model(name);
-};
+	model(name) {
+		return this.sequelize.model(name);
+	}
 
-
-module.exports = {
-
-	get: function() {
-		if (!schema)
-			throw new Error('Schema is not initialized yet. Call schema.init() before use.');
+	static async get(uri) {
+		// eslint-disable-next-line no-process-env
+		uri = uri || process.env.CARGO_AUTH_DB_URI;
+		if (!schema) {
+			schema = await Schema.init(uri);
+		}
 		return schema;
-	},
+	}
 
-	init: async function(uri, options) {
-		if (schema) return schema;
+	static close() {
+		if (schema && schema.sequelize) {
+			schema.sequelize.close();
+			schema = null;
+		}
+	}
+
+	static async init(...args) {
+		if (schema && schema.sequelize) {
+			schema.sequelize.close();
+		}
+
+		let uri = null;
+		let options = {};
+		switch (args.length) {
+			case 0:
+				break;
+			case 1:
+				if ( typeof args[0] === 'string' || args[0] instanceof URI ) {
+					uri = args[0];
+				} else {
+					options = args[0];
+				}
+				break;
+			default:
+				uri = args[0];
+				options = args[1];
+		}
+
+		// eslint-disable-next-line no-process-env
+		uri = uri || process.env.CARGO_AUTH_DB_URI;
+		if ( uri instanceof URI ) {
+			uri = uri.toString();
+		}
+
 		const config = Object.assign({
 			drop: false,
 			sync: false
@@ -48,7 +84,8 @@ module.exports = {
 				underscoredAll: true,
 			},
 			timezone: 'Europe/Berlin',
-			logging: false
+			logging: false,
+			pool: true
 		});
 
 		const Organizations = Organization.define(sequelize);
@@ -62,6 +99,7 @@ module.exports = {
 		const UserGroups = UserGroup.define(sequelize);
 		const UserRoles = UserRole.define(sequelize);
 		const UserPermissions = UserPermission.define(sequelize);
+		Setting.define(sequelize);
 
 		Organizations.hasMany(Users);
 		Organizations.hasMany(Groups);
@@ -81,7 +119,7 @@ module.exports = {
 		Users.belongsToMany(Permissions, {through: UserPermissions});
 
 		if (config.drop) {
-			await sequelize.drop();
+			await sequelize.dropAllSchemas();
 		}
 
 		await sequelize.sync({force: config.force});
@@ -94,4 +132,6 @@ module.exports = {
 		return schema;
 	}
 
-};
+}
+
+module.exports = Schema;
