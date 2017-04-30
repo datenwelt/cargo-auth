@@ -1,8 +1,8 @@
 const describe = require("mocha").describe;
 const it = require("mocha").it;
+const assert = require("chai").assert;
 const EventEmitter = require('events').EventEmitter;
 const VError = require("verror");
-const assert = require("chai").assert;
 
 const Model = require("../../src/model");
 

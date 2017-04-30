@@ -1,19 +1,18 @@
+/* eslint-disable new-cap */
 const Sequelize = require('sequelize');
 
 module.exports = {
 	define: function (schema) {
 		return schema.define('UserPermission', {
-			mode: {
+			Mode: {
 				type: Sequelize.ENUM('allowed', 'denied'),
 				allowNull: false,
 				defaultValue: 'allowed'
 			},
-			prio: {
+			Prio: {
 				type: Sequelize.INTEGER,
 				allowNull: false
 			}
-		}, {
-			tableName: 'user_permissions'
 		});
 	}
 };

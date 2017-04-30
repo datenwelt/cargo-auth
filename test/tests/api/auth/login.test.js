@@ -20,23 +20,21 @@ describe("api/auth/login.js", function () {
 
 	describe("POST /login", function () {
 
-		let haveDb = false;
-
 		let schema = null;
+
 		before(async function () {
-			haveDb = await SchemaUtil.assertDb();
-			if (!haveDb) return;
-			schema = await SchemaUtil.schema({drop: true});
+			schema = await SchemaUtil.schema();
+			if ( !schema ) return;
 			await schema.model('User').create({
-				username: "testman",
-				password: "{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc",
-				email: "test@testman.de"
+				Username: "testman",
+				Password: "{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc",
+				Email: "test@testman.de"
 			});
 			let data = await fs.readFileAsync('test/data/rsa/privkey.pem');
 			let privKey = PEMReader.readPrivateKey(data);
 			await schema.model('Settings').create({
-				name: 'ServerPrivateKey',
-				value: privKey
+				Name: 'ServerPrivateKey',
+				Value: privKey
 			});
 		});
 
@@ -58,6 +56,8 @@ describe("api/auth/login.js", function () {
 		});
 
 		it("performs a login with valid credentials", async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!schema) this.skip();
 			let resp = await superagent.post(app.uri.toString())
 				.send({username: "testman", password: "test123456"});
 			expect(true).to.equal(true);

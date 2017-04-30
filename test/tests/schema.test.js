@@ -1,5 +1,3 @@
-/* eslint-disable no-unused-expressions,no-invalid-this */
-const mysql = require('mysql2/promise');
 const assert = require('chai').assert;
 
 const Schema = require('../../src/schema');
@@ -11,19 +9,17 @@ const utils = require('./utils/schema');
 
 describe('schema.js', function() {
 
-	// const DB = "mysql://cargo:chieshoaC8Ingoob@localhost:13701/cargo_auth?connectTimeout=1000";
-
-	let skip = null;
-
+	let dontSkip = null;
 	before(async function() {
-		skip = await utils.assertDb();
+		dontSkip = await utils.schema();
 	});
 
 	describe('Schema.init()', function() {
 
 		it("defines the schema", async function() {
-			if ( !skip ) return this.skip();
-			const schema = await Schema.init(null, { drop: true });
+			// eslint-disable-next-line no-invalid-this
+			if ( !dontSkip ) return this.skip();
+			const schema = await Schema.init();
 			assert.instanceOf(schema, Schema);
 			assert.isDefined(schema.uri);
 			assert.isDefined(schema.sequelize);

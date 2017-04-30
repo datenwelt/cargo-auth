@@ -7,6 +7,7 @@ const GroupPermission = require('./schema/group-permission');
 const GroupRole = require('./schema/group-role');
 const Organization = require('./schema/organization');
 const Permission = require('./schema/permission');
+const PermissionBitmap = require('./schema/permission-bitmaps');
 const Role = require('./schema/role');
 const RolePermission = require('./schema/role-permission');
 const Setting = require('./schema/setting');
@@ -79,9 +80,7 @@ class Schema {
 
 		const sequelize = new Sequelize(uri, {
 			define: {
-				timestamps: false,
-				underscored: true,
-				underscoredAll: true,
+				timestamps: false
 			},
 			timezone: 'Europe/Berlin',
 			logging: false,
@@ -92,6 +91,8 @@ class Schema {
 		const Roles = Role.define(sequelize);
 		const Groups = Group.define(sequelize);
 		const Permissions = Permission.define(sequelize);
+		// eslint-disable-next-line no-unused-vars
+		const PermissionBitmaps = PermissionBitmap.define(sequelize);
 		const GroupPermissions = GroupPermission.define(sequelize);
 		const GroupRoles = GroupRole.define(sequelize);
 		const RolePermissions = RolePermission.define(sequelize);
@@ -99,7 +100,8 @@ class Schema {
 		const UserGroups = UserGroup.define(sequelize);
 		const UserRoles = UserRole.define(sequelize);
 		const UserPermissions = UserPermission.define(sequelize);
-		Setting.define(sequelize);
+		// eslint-disable-next-line no-unused-vars
+		const Settings = Setting.define(sequelize);
 
 		Organizations.hasMany(Users);
 		Organizations.hasMany(Groups);
@@ -125,8 +127,8 @@ class Schema {
 		await sequelize.sync({force: config.force});
 
 		await Organizations.findOrCreate({
-			where: {name: 'PUBLIC'},
-			defaults: {name: 'PUBLIC'}
+			where: {Name: 'PUBLIC'},
+			defaults: {Name: 'PUBLIC'}
 		});
 		schema = new Schema(sequelize, uri);
 		return schema;

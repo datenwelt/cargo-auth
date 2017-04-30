@@ -4,22 +4,20 @@ module.exports = {
 
 	define: function(schema) {
 		return schema.define('Organization', {
-			id: {
+			Id: {
 				type: Sequelize.INTEGER,
 				primaryKey: true,
 				autoIncrement: true,
 				comment: 'Unique numerical ID of the organization.'
 			},
-			name: {
+			Name: {
 				type: Sequelize.STRING,
 				allowNull: false,
 				comment: 'Name of the organization.'
 			},
-			shortName: {
-				field: 'short_name',
+			ShortName: {
 				// eslint-disable-next-line new-cap
-				type: Sequelize.STRING(40),
-
+				type: Sequelize.STRING(40)
 			}
 		});
 	}
