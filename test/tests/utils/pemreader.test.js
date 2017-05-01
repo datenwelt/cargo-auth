@@ -11,7 +11,7 @@ const it = require("mocha").it;
 const describe = require("mocha").describe;
 const expect = chai.expect;
 
-describe("lib/pemreader.js", function () {
+describe("utils/pemreader.js", function () {
 
 	const unencryptedPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0ukwklDp1CUNOhZCraBZ8vT8EKVvXFNbJtkrX+tBF2zFckw8

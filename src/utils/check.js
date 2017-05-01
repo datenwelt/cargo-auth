@@ -1,4 +1,5 @@
 const _ = require('underscore');
+const VError = require('verror');
 
 function chain(check, value) {
 	let chained = {};
@@ -9,6 +10,13 @@ function chain(check, value) {
 		return value;
 	};
 	return chained;
+}
+
+function error(...args) {
+	return new VError({
+		name: "CargoCheckError",
+
+	}, ...args);
 }
 
 const Check = {
@@ -23,7 +31,7 @@ const Check = {
 				} catch (err) {
 					return this;
 				}
-				throw new Error(msg);
+				throw error(msg);
 				// eslint-disable-next-line no-invalid-this
 			}.bind(this);
 		}, this);
@@ -31,7 +39,7 @@ const Check = {
 
 	isBlank: function(value, msg) {
 		if (value === '' || _.isUndefined(value) || _.isNull(value)) return this;
-		throw new Error(msg);
+		throw error(msg);
 	},
 
 	equals: function(value1, value2, msg) {
@@ -39,14 +47,14 @@ const Check = {
 		if ( value1 == value2 ) {
 			return this;
 		}
-		throw new Error(msg);
+		throw error(msg);
 	},
 
 	string: function(value, msg) {
 		if (_.isString(value)) return this;
 		if (_.isUndefined(value) || _.isNull(value)) return chain(Check, "");
 		if (_.isNumber(value) || _.isBoolean(value)) return chain(Check, String(value));
-		throw new Error(msg);
+		throw error(msg);
 	},
 
 	trim: function(value, msg) {

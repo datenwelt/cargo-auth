@@ -1,10 +1,10 @@
-const _ = require('underscore');
+const check = require('../utils/check');
 const bluebird = require('bluebird');
 const crypto = require('crypto');
 const jwt = bluebird.promisifyAll(require('jsonwebtoken'));
 const moment = require('moment');
-const millis = require('ms');
 
+const Config = require('../config');
 const Model = require('../model');
 const Schema = require('../schema');
 const VError = require('verror');
@@ -15,20 +15,31 @@ const ERR_LOGIN_FAILED = Model.createError('ERR_LOGIN_FAILED');
 
 let instance = null;
 
-class User extends Model {
+class UserAPI extends Model {
 
-	constructor(schema) {
+	constructor(config) {
 		super('io.cargohub.auth');
-		this.schema = schema;
+		this.config = config || new Config();
 	}
 
 	async login(username, password, options) {
 		options = Object.assign({
 			validFor: '4h'
 		}, options || {});
-		const schema = await Schema.get();
-		const User = schema.model('User');
-		let user = await User.findOne({where: {Username: username}});
+		try {
+			username = check(username).trim('ERR_USERNAME_INVALID')
+				.not().isBlank('ERR_USERNAME_MISSING')
+				.val();
+			password = check(password).trim('ERR_PASSWORD_INVALID')
+				.not().isBlank('ERR_PASSWORD_MISSING')
+				.val();
+		} catch (err) {
+			if ( err.name === 'CargoCheckError')
+				throw this.error(err.message);
+			throw err;
+		}
+		const schema = this.config.schema;
+		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (!user) throw this.error(ERR_UNKNOWN_USER);
 		if (!user.get('Active')) {
 			throw this.error(ERR_LOGIN_SUSPENDED);
@@ -41,35 +52,45 @@ class User extends Model {
 		if (hashed.toLowerCase() !== matches[2].toLowerCase()) {
 			throw this.error(ERR_LOGIN_FAILED);
 		}
-
-		const Settings = schema.model('Settings');
-		let {Value: privateKey} = await Settings.findOne({attributes: ['Value'], where: {Name: 'serverPrivateKey'}});
-		if (!privateKey) {
-			throw new VError('Unable to perform login for user "%s", private key for server is not configured.', username);
+		const privateKey = this.config.rsaPrivateKey;
+		const permissions = await user.permissions();
+		let latestPBM = await schema.model('PermissionBitmap').findLatest();
+		if (!latestPBM) {
+			latestPBM = await schema.model('PermissionBitmap').createLatest();
 		}
-		const permissions = user.permissions();
+		const pbm = latestPBM.permissionsToBitmap(permissions);
+		const userId = user.get('Id');
 		let session = {
-			expiresIn: moment().add(millis(options.validFor), 'ms').format('X'),
+			expiresIn: options.validFor,
 			issuedAt: moment().format('X'),
-			username: username
+			userid: userId,
+			username: username,
+			permissions: permissions
 		};
-		const token = await jwt.signAsync({
+		// TODO:Something is wrong with the expiresIn time conversion. Seems to be ms instead of secs.
+		session.token = await jwt.signAsync({
 			iat: session.issuedAt,
-			username: username
+			usr: {
+				id: userId,
+				nam: username,
+			},
+			pbm: {
+				vers: latestPBM.Version,
+				bits: pbm
+			}
 		}, privateKey, {
 			algorithm: 'RS256',
 			expiresIn: session.expiresIn
 		});
-		session.token = token;
 		return session;
 	}
 
 	static async get() {
 		if (instance) return instance;
 		let schema = await Schema.get();
-		return new User(schema);
+		return new UserAPI(schema);
 	}
 
 }
 
-module.exports = User;
+module.exports = UserAPI;

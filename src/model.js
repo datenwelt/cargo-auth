@@ -9,13 +9,13 @@ class Model extends EventEmitter {
 	}
 
 	error(err, cause) {
-		if (err instanceof VError && err.name === "CARGO_MODEL_ERROR") {
+		if (err instanceof VError && err.name === "CargoModelError") {
 			err.cause = cause;
 			err.model = this.name;
 		} else if (err instanceof Error) {
 			err = Model.createError("UNKNOWN_ERROR_CODE", err, this.name);
 		} else {
-			err = Model.createError("UNKNOWN_ERROR_CODE", new Error(err), this.name);
+			err = Model.createError(err, new Error(err), this.name);
 		}
 		this.emit('error', err);
 		return err;

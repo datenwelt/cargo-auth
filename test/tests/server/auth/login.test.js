@@ -9,14 +9,14 @@ const bluebird = require('bluebird');
 const fs = bluebird.promisifyAll(require('fs'));
 const superagent = require('superagent');
 
-const utils = require('../../../test-utils/api');
+const utils = require('../../../test-utils/server');
 const SchemaUtil = require('../../../test-utils/schema');
 const PEMReader = require('../../../../src/utils/pemreader');
 
-const login = require('../../../../src/api/auth/login');
+const login = require('../../../../src/server/auth/login');
 
 
-xdescribe("api/auth/login.js", function () {
+xdescribe("server/auth/login.js", function () {
 
 	describe("POST /login", function () {
 
@@ -25,7 +25,7 @@ xdescribe("api/auth/login.js", function () {
 		before(async function () {
 			schema = await SchemaUtil.schema();
 			if ( !schema ) return;
-			await schema.model('User').create({
+			await schema.model('UserAPI').create({
 				Username: "testman",
 				Password: "{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc",
 				Email: "test@testman.de"
