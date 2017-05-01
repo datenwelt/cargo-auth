@@ -1,6 +1,6 @@
 const Promise = require('bluebird');
 
-const PEM = require('../../../src/lib/pemreader');
+const PEM = require('../../../src/utils/pemreader');
 const fs = Promise.promisifyAll(require('fs'));
 
 const jwt = Promise.promisifyAll(require('jsonwebtoken'));

@@ -1,4 +1,3 @@
-/* eslint-disable new-cap */
 const Sequelize = require('sequelize');
 
 module.exports = {
@@ -12,6 +11,10 @@ module.exports = {
 			Prio: {
 				type: Sequelize.INTEGER,
 				allowNull: false
+			}
+		}, {
+			instanceMethods: {
+
 			}
 		});
 	}

@@ -9,14 +9,14 @@ const bluebird = require('bluebird');
 const fs = bluebird.promisifyAll(require('fs'));
 const superagent = require('superagent');
 
-const utils = require('../../utils/api');
-const SchemaUtil = require('../../utils/schema');
-const PEMReader = require('../../../../src/lib/pemreader');
+const utils = require('../../../test-utils/api');
+const SchemaUtil = require('../../../test-utils/schema');
+const PEMReader = require('../../../../src/utils/pemreader');
 
 const login = require('../../../../src/api/auth/login');
 
 
-describe("api/auth/login.js", function () {
+xdescribe("api/auth/login.js", function () {
 
 	describe("POST /login", function () {
 

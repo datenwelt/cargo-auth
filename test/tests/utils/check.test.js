@@ -3,7 +3,7 @@ const it = require("mocha").it;
 const assert = require('chai').assert;
 const sinon = require('sinon');
 
-const check = require('../../../src/lib/check');
+const check = require('../../../src/utils/check');
 
 describe("lib/check.js", function() {
 

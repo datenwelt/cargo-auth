@@ -7,13 +7,14 @@ const GroupPermission = require('./schema/group-permission');
 const GroupRole = require('./schema/group-role');
 const Organization = require('./schema/organization');
 const Permission = require('./schema/permission');
-const PermissionBitmap = require('./schema/permission-bitmaps');
+const PermissionBitmap = require('./schema/permission-bitmap');
 const Role = require('./schema/role');
 const RolePermission = require('./schema/role-permission');
 const Setting = require('./schema/setting');
 const User = require('./schema/user');
 const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
+const UserOrganization = require('./schema/user-organisation');
 const UserPermission = require('./schema/user-permission');
 
 let schema = null;
@@ -29,11 +30,9 @@ class Schema {
 		return this.sequelize.model(name);
 	}
 
-	static async get(uri) {
-		// eslint-disable-next-line no-process-env
-		uri = uri || process.env.CARGO_AUTH_DB_URI;
+	static async get(...args) {
 		if (!schema) {
-			schema = await Schema.init(uri);
+			schema = await Schema.init(...args);
 		}
 		return schema;
 	}
@@ -56,7 +55,7 @@ class Schema {
 			case 0:
 				break;
 			case 1:
-				if ( typeof args[0] === 'string' || args[0] instanceof URI ) {
+				if (typeof args[0] === 'string' || args[0] instanceof URI) {
 					uri = args[0];
 				} else {
 					options = args[0];
@@ -69,7 +68,7 @@ class Schema {
 
 		// eslint-disable-next-line no-process-env
 		uri = uri || process.env.CARGO_AUTH_DB_URI;
-		if ( uri instanceof URI ) {
+		if (uri instanceof URI) {
 			uri = uri.toString();
 		}
 
@@ -100,10 +99,10 @@ class Schema {
 		const UserGroups = UserGroup.define(sequelize);
 		const UserRoles = UserRole.define(sequelize);
 		const UserPermissions = UserPermission.define(sequelize);
+		const UserOrganizations = UserOrganization.define(sequelize);
 		// eslint-disable-next-line no-unused-vars
 		const Settings = Setting.define(sequelize);
 
-		Organizations.hasMany(Users);
 		Organizations.hasMany(Groups);
 		Organizations.hasMany(Roles);
 
@@ -115,7 +114,7 @@ class Schema {
 		Groups.belongsToMany(Roles, {through: GroupRoles});
 		Groups.belongsToMany(Users, {through: UserGroups});
 
-		Users.belongsTo(Organizations);
+		Users.belongsToMany(Organizations, {through: UserOrganizations});
 		Users.belongsToMany(Groups, {through: UserGroups});
 		Users.belongsToMany(Roles, {through: UserRoles});
 		Users.belongsToMany(Permissions, {through: UserPermissions});

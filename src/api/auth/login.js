@@ -1,8 +1,8 @@
-const check = require('../../lib/check');
+const check = require('../../utils/check');
 const express = require('express');
 const VError = require('verror');
 
-const handle = require('../../lib/api').asyncHandler;
+const handle = require('../../utils/api').asyncHandler;
 
 const UserModel = require('../../model/user').get();
 

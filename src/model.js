@@ -32,5 +32,4 @@ class Model extends EventEmitter {
 	}
 }
 
-
 module.exports = Model;

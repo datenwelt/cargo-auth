@@ -1,4 +1,4 @@
-const Schema = require('../../../src/schema');
+const Schema = require('../../src/schema');
 const mysql = require('mysql2/promise');
 
 const DB = 'mysql://cargo:chieshoaC8Ingoob@localhost:13701/cargo_auth?connectTimeout=1000&multipleStatements=true';
@@ -28,7 +28,7 @@ async function assertSchema(options) {
 		if (!db) {
 			schema = false;
 		} else {
-			schema = await Schema.init(DB, {drop: true});
+			schema = await Schema.get({drop: true});
 		}
 	} catch (err) {
 		schema = false;

@@ -5,7 +5,7 @@ const it = require("mocha").it;
 const before = require("mocha").before;
 const describe = require("mocha").describe;
 
-const utils = require('./utils/schema');
+const utils = require('../test-utils/schema');
 
 describe('schema.js', function() {
 
@@ -19,7 +19,7 @@ describe('schema.js', function() {
 		it("defines the schema", async function() {
 			// eslint-disable-next-line no-invalid-this
 			if ( !dontSkip ) return this.skip();
-			const schema = await Schema.init();
+			const schema = await Schema.get();
 			assert.instanceOf(schema, Schema);
 			assert.isDefined(schema.uri);
 			assert.isDefined(schema.sequelize);
