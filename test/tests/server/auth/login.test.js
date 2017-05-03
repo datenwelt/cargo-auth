@@ -25,7 +25,7 @@ xdescribe("server/auth/login.js", function () {
 		before(async function () {
 			schema = await SchemaUtil.schema();
 			if ( !schema ) return;
-			await schema.model('UserAPI').create({
+			await schema.model('AuthAPI').create({
 				Username: "testman",
 				Password: "{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc",
 				Email: "test@testman.de"

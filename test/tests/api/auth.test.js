@@ -10,7 +10,7 @@ const VError = require('verror');
 const TestConfig = require('../../test-utils/config');
 const TestSchema = require('../../test-utils/schema');
 
-const UserAPI = require('../../../src/api/user');
+const AuthAPI = require('../../../src/api/auth');
 
 
 describe("api/user.js", function () {
@@ -20,6 +20,7 @@ describe("api/user.js", function () {
 
 	before(async function () {
 		try {
+			config = await TestConfig.init();
 			db = await TestSchema.db();
 			const prepareSql = `
 			DELETE FROM Permissions;
@@ -54,20 +55,19 @@ describe("api/user.js", function () {
 		} catch (err) {
 			db = null;
 		}
-		config = await TestConfig.init();
 	});
 
 	describe('login()', function() {
 
 		it('returns a valid session on successful login', async function () {
 			if ( !db ) this.skip();
-			const session = await new UserAPI().login('testman', 'test123456');
+			const session = await new AuthAPI().login('testman', 'test123456');
 			assert.isDefined(session);
 			assert.typeOf(session, 'object');
 			assert.isDefined(session.token);
 			assert.deepEqual(session.permissions, ['Administrator', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
-			assert.isBelow(session.issuedAt*1000, new Date().getTime());
+			assert.isBelow(new Date().getTime(), session.issuedAt*1000);
 			assert.strictEqual(session.username, 'testman');
 			assert.strictEqual(session.userid, 1);
 
@@ -80,10 +80,25 @@ describe("api/user.js", function () {
 			assert.deepEqual(payload.pbm, { vers: latestBitmap.Version, bits: 6 });
 		});
 
+		it('emits a login event on successful login', function (done) {
+			if ( !db ) this.skip();
+			const api = new AuthAPI();
+			api.onAny(function(eventName, eventPayload) {
+				try {
+					assert.strictEqual(eventName, 'io.cargohub.auth.login');
+					assert.isDefined(eventPayload);
+					done();
+				} catch (err) {
+					done(err);
+				}
+			});
+			api.login('testman', 'test123456');
+		});
+
 		it('throws ERR_USERNAME_MISSING', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login(null, 'test123456');
+				await new AuthAPI().login(null, 'test123456');
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');
@@ -94,7 +109,7 @@ describe("api/user.js", function () {
 		it('throws ERR_USERNAME_INVALID', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login({ test: 1 }, 'test123456');
+				await new AuthAPI().login({ test: 1 }, 'test123456');
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');
@@ -105,7 +120,7 @@ describe("api/user.js", function () {
 		it('throws ERR_PASSWORD_MISSING', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login('testman', null);
+				await new AuthAPI().login('testman', null);
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');
@@ -116,7 +131,7 @@ describe("api/user.js", function () {
 		it('throws ERR_PASSWORD_INVALID', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login('testman', { test: 1});
+				await new AuthAPI().login('testman', { test: 1});
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');
@@ -127,7 +142,7 @@ describe("api/user.js", function () {
 		it('throws ERR_UNKNOWN_USER', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login('testman2', 'test123456');
+				await new AuthAPI().login('testman2', 'test123456');
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');
@@ -138,7 +153,7 @@ describe("api/user.js", function () {
 		it('throws ERR_LOGIN_FAILED', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login('testman', 'test1234567');
+				await new AuthAPI().login('testman', 'test1234567');
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');
@@ -149,7 +164,7 @@ describe("api/user.js", function () {
 		it('throws ERR_LOGIN_SUSPENDED', async function() {
 			if ( !db ) this.skip();
 			try {
-				await new UserAPI().login('testman-inactive', 'test1234567');
+				await new AuthAPI().login('testman-inactive', 'test1234567');
 			} catch (err) {
 				assert.instanceOf(err, VError);
 				assert.strictEqual(err.name, 'CargoModelError');

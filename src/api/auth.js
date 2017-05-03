@@ -3,19 +3,16 @@ const bluebird = require('bluebird');
 const crypto = require('crypto');
 const jwt = bluebird.promisifyAll(require('jsonwebtoken'));
 const moment = require('moment');
-
+const ms = require('ms');
 const Config = require('../config');
-const Model = require('../model');
-const Schema = require('../schema');
+const API = require('../api');
 const VError = require('verror');
 
-const ERR_UNKNOWN_USER = Model.createError('ERR_UNKNOWN_USER');
-const ERR_LOGIN_SUSPENDED = Model.createError('ERR_LOGIN_SUSPENDED');
-const ERR_LOGIN_FAILED = Model.createError('ERR_LOGIN_FAILED');
+const ERR_UNKNOWN_USER = API.createError('ERR_UNKNOWN_USER');
+const ERR_LOGIN_SUSPENDED = API.createError('ERR_LOGIN_SUSPENDED');
+const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 
-let instance = null;
-
-class UserAPI extends Model {
+class AuthAPI extends API {
 
 	constructor(config) {
 		super('io.cargohub.auth');
@@ -34,7 +31,7 @@ class UserAPI extends Model {
 				.not().isBlank('ERR_PASSWORD_MISSING')
 				.val();
 		} catch (err) {
-			if ( err.name === 'CargoCheckError')
+			if (err.name === 'CargoCheckError')
 				throw this.error(err.message);
 			throw err;
 		}
@@ -60,37 +57,25 @@ class UserAPI extends Model {
 		}
 		const pbm = latestPBM.permissionsToBitmap(permissions);
 		const userId = user.get('Id');
+		const now = moment();
+		const exp = now.add(ms(options.validFor), 'ms').unix();
 		let session = {
 			expiresIn: options.validFor,
-			issuedAt: moment().format('X'),
+			issuedAt: now.unix(),
 			userid: userId,
 			username: username,
 			permissions: permissions
 		};
-		// TODO:Something is wrong with the expiresIn time conversion. Seems to be ms instead of secs.
 		session.token = await jwt.signAsync({
-			iat: session.issuedAt,
-			usr: {
-				id: userId,
-				nam: username,
-			},
-			pbm: {
-				vers: latestPBM.Version,
-				bits: pbm
-			}
-		}, privateKey, {
-			algorithm: 'RS256',
-			expiresIn: session.expiresIn
-		});
+			iat: now.unix(),
+			exp: exp,
+			usr: {id: userId, nam: username},
+			pbm: {vers: latestPBM.Version, bits: pbm}
+		}, privateKey, {algorithm: 'RS256'});
+		this.emit(this.name + '.login', session);
 		return session;
-	}
-
-	static async get() {
-		if (instance) return instance;
-		let schema = await Schema.get();
-		return new UserAPI(schema);
 	}
 
 }
 
-module.exports = UserAPI;
+module.exports = AuthAPI;

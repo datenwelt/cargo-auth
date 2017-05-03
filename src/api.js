@@ -1,10 +1,10 @@
-const EventEmitter = require('events').EventEmitter;
+const EventEmitter = require('eventemitter2').EventEmitter2;
 const VError = require('verror');
 
-class Model extends EventEmitter {
+class API extends EventEmitter {
 
 	constructor(name) {
-		super();
+		super({wildcard: true, delimiter: '.', newListener: false,});
 		this.name = name;
 	}
 
@@ -13,9 +13,9 @@ class Model extends EventEmitter {
 			err.cause = cause;
 			err.model = this.name;
 		} else if (err instanceof Error) {
-			err = Model.createError("UNKNOWN_ERROR_CODE", err, this.name);
+			err = API.createError("UNKNOWN_ERROR_CODE", err, this.name);
 		} else {
-			err = Model.createError(err, new Error(err), this.name);
+			err = API.createError(err, new Error(err), this.name);
 		}
 		this.emit('error', err);
 		return err;
@@ -32,4 +32,4 @@ class Model extends EventEmitter {
 	}
 }
 
-module.exports = Model;
+module.exports = API;

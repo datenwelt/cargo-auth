@@ -3,7 +3,7 @@ const VError = require('verror');
 
 const handle = require('../../utils/api').asyncHandler;
 
-const UserAPI = require('../../api/user').get();
+const AuthAPI = require('../../api/auth');
 
 // eslint-disable-next-line new-cap
 const router = express.Router();
@@ -11,7 +11,7 @@ const router = express.Router();
 router.post("/", handle(async function (req, res) {
 	const body = req.body;
 	try {
-		const session = await UserAPI.login(body.username, body.password);
+		const session = await AuthAPI.login(body.username, body.password);
 		return res.send(200, session);
 	} catch (err) {
 		if ( err.name === 'CargoModelError' ) {
