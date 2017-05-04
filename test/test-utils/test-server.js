@@ -5,7 +5,7 @@ const URI = require('urijs');
 
 module.exports = {
 
-	startServer: function() {
+	start: function() {
 		return new Promise(function(resolve, reject) {
 			const app = express();
 			app.on('error', function(err) {

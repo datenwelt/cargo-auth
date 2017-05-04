@@ -9,6 +9,13 @@ module.exports = {
 			}
 			return result;
 		};
+	},
+
+	apiInjector: function(api) {
+		return function(req, res, next) {
+			req.api = api;
+			next();
+		};
 	}
 
 };

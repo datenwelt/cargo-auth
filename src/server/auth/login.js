@@ -1,15 +1,17 @@
 const express = require('express');
 const VError = require('verror');
 
-const handle = require('../../utils/api').asyncHandler;
-
-const AuthAPI = require('../../api/auth');
+const handle = require('../../utils/server-utils').asyncHandler;
 
 // eslint-disable-next-line new-cap
 const router = express.Router();
 
 router.post("/", handle(async function (req, res) {
 	const body = req.body;
+	if ( !req.api || !req.api.AuthAPI ) {
+		throw new VError('Router for /login has no access to API.');
+	}
+	const AuthAPI = req.api.AuthAPI;
 	try {
 		const session = await AuthAPI.login(body.username, body.password);
 		return res.send(200, session);
