@@ -1,4 +1,3 @@
-const process = require('process');
 const Sequelize = require('sequelize');
 const URI = require('urijs');
 
@@ -10,64 +9,17 @@ const Permission = require('./schema/permission');
 const PermissionBitmap = require('./schema/permission-bitmap');
 const Role = require('./schema/role');
 const RolePermission = require('./schema/role-permission');
-const Setting = require('./schema/setting');
+const Session = require('./schema/session');
 const User = require('./schema/user');
 const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
 const UserOrganization = require('./schema/user-organisation');
 const UserPermission = require('./schema/user-permission');
 
-let schema = null;
-
 class Schema {
 
-	constructor(sequelize, uri) {
-		this.sequelize = sequelize;
-		this.uri = uri;
-	}
-
-	model(name) {
-		return this.sequelize.model(name);
-	}
-
-	static async get(...args) {
-		if (!schema) {
-			schema = await Schema.init(...args);
-		}
-		return schema;
-	}
-
-	static close() {
-		if (schema && schema.sequelize) {
-			schema.sequelize.close();
-			schema = null;
-		}
-	}
-
-	static async init(...args) {
-		if (schema && schema.sequelize) {
-			schema.sequelize.close();
-		}
-
-		let uri = null;
-		let options = {};
-		switch (args.length) {
-			case 0:
-				break;
-			case 1:
-				if (typeof args[0] === 'string' || args[0] instanceof URI) {
-					uri = args[0];
-				} else {
-					options = args[0];
-				}
-				break;
-			default:
-				uri = args[0];
-				options = args[1];
-		}
-
+	static async init(uri, options) {
 		// eslint-disable-next-line no-process-env
-		uri = uri || process.env.CARGO_AUTH_DB_URI;
 		if (uri instanceof URI) {
 			uri = uri.toString();
 		}
@@ -101,7 +53,7 @@ class Schema {
 		const UserPermissions = UserPermission.define(sequelize);
 		const UserOrganizations = UserOrganization.define(sequelize);
 		// eslint-disable-next-line no-unused-vars
-		const Settings = Setting.define(sequelize);
+		const Sessions = Session.define(sequelize);
 
 		Organizations.hasMany(Groups);
 		Organizations.hasMany(Roles);
@@ -129,8 +81,7 @@ class Schema {
 			where: {Name: 'PUBLIC'},
 			defaults: {Name: 'PUBLIC'}
 		});
-		schema = new Schema(sequelize, uri);
-		return schema;
+		return sequelize;
 	}
 
 }

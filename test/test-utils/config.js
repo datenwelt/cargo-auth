@@ -1,6 +1,5 @@
-/* eslint-disable no-sync */
+/* eslint-disable no-sync,no-process-env */
 const fs = require('fs');
-const Config = require('../../src/config');
 const NodeRSA = require('node-rsa');
 const TestSchema = require('./schema');
 
@@ -10,17 +9,17 @@ module.exports = {
 
 	init: async function() {
 		if ( config ) return config;
-		const privateKey = fs.readFileSync('test/data/rsa/privkey.pem', 'utf8');
+		const privateKeyFile = process.env.CARGO_AUTH_PRIVKEY_FILE || 'test/data/rsa/privkey.pem';
+		const privateKey = fs.readFileSync(privateKeyFile, 'utf8');
 		const publicKey = new NodeRSA(privateKey).exportKey('public');
+		const db = await TestSchema.db();
 		const schema = await TestSchema.schema();
-		Config.setup({
-			db: 'mysql://cargo:chieshoaC8Ingoob@localhost:13701/cargo_auth?connectTimeout=1000&multipleStatements=true',
+		return {
+			db: db,
 			schema: schema,
 			rsaPrivateKey: privateKey,
 			rsaPublicKey: publicKey
-		});
-		config = new Config();
-		return config;
+		};
 	}
 
 };

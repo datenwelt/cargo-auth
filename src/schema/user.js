@@ -31,6 +31,11 @@ module.exports = {
 				allowNull: false,
 				defaultValue: true,
 				comment: 'True if user can login, false if user login is temporarily deactivated.'
+			},
+			RsaPublicKey: {
+				type: Sequelize.TEXT,
+				allowNull: true,
+				comment: 'RSA public key of the user. (optional)'
 			}
 		}, {
 			instanceMethods: {

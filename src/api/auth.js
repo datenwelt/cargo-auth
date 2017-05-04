@@ -1,10 +1,5 @@
 const check = require('../utils/check');
-const bluebird = require('bluebird');
 const crypto = require('crypto');
-const jwt = bluebird.promisifyAll(require('jsonwebtoken'));
-const moment = require('moment');
-const ms = require('ms');
-const Config = require('../config');
 const API = require('../api');
 const VError = require('verror');
 
@@ -14,9 +9,10 @@ const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 
 class AuthAPI extends API {
 
-	constructor(config) {
+	constructor(schema, rsaPrivateKey) {
 		super('io.cargohub.auth');
-		this.config = config || new Config();
+		this.schema = schema;
+		this.rsaPrivateKey = rsaPrivateKey;
 	}
 
 	async login(username, password, options) {
@@ -35,7 +31,7 @@ class AuthAPI extends API {
 				throw this.error(err.message);
 			throw err;
 		}
-		const schema = this.config.schema;
+		const schema = this.schema;
 		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (!user) throw this.error(ERR_UNKNOWN_USER);
 		if (!user.get('Active')) {
@@ -49,29 +45,8 @@ class AuthAPI extends API {
 		if (hashed.toLowerCase() !== matches[2].toLowerCase()) {
 			throw this.error(ERR_LOGIN_FAILED);
 		}
-		const privateKey = this.config.rsaPrivateKey;
-		const permissions = await user.permissions();
-		let latestPBM = await schema.model('PermissionBitmap').findLatest();
-		if (!latestPBM) {
-			latestPBM = await schema.model('PermissionBitmap').createLatest();
-		}
-		const pbm = latestPBM.permissionsToBitmap(permissions);
-		const userId = user.get('Id');
-		const now = moment();
-		const exp = now.add(ms(options.validFor), 'ms').unix();
-		let session = {
-			expiresIn: options.validFor,
-			issuedAt: now.unix(),
-			userid: userId,
-			username: username,
-			permissions: permissions
-		};
-		session.token = await jwt.signAsync({
-			iat: now.unix(),
-			exp: exp,
-			usr: {id: userId, nam: username},
-			pbm: {vers: latestPBM.Version, bits: pbm}
-		}, privateKey, {algorithm: 'RS256'});
+		const privateKey = this.rsaPrivateKey;
+		let session = await schema.model('Session').createForUser(user, privateKey, options);
 		this.emit(this.name + '.login', session);
 		return session;
 	}
