@@ -216,8 +216,11 @@ const PEMReader = {
 		}
 		let matches = line.match(/^Proc-Type:\s+(.+)/);
 		if (matches) {
-			// Encrypted private key.
-			
+			// Encrypted private key. Passphrase is needed.
+			if ( !passphrase ) {
+				throw new VError('Missing passphrase to decrypt private key.');
+			}
+
 			// Read Proc-Type and DEK-Info headers to find algorithm and IV.
 			const proctype = matches[1].trim().toUpperCase();
 			if (proctype !== '4,ENCRYPTED') {

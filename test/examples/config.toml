@@ -1,0 +1,11 @@
+db = "mysql://cargo:chieshoaC8Ingoob@localhost:13701/cargo_auth?connectTimeout=1000&multipleStatements=true"
+workers = 4
+
+[listen]
+    address = "0.0.0.0"
+    port = "26571"
+
+[rsa]
+    keyfile = "test/data/rsa/privkey.encrypted.pem"
+    passphrase = "test123456"
+

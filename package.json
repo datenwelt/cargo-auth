@@ -2,7 +2,7 @@
   "name": "cargo-auth",
   "version": "0.1.0",
   "description": "Authentication API and library for projects by \"datenwelt it service AG\" and friends. ",
-  "main": "index.js",
+  "main": "src/server.js",
   "directories": {
     "test": "test"
   },
@@ -37,6 +37,7 @@
     "mysql2": "^1.2.0",
     "node-rsa": "^0.4.2",
     "sequelize": "^3.30.4",
+    "toml": "^2.3.2",
     "underscore": "^1.8.3",
     "urijs": "^1.18.10",
     "verror": "^1.9.0"
