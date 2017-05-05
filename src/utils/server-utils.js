@@ -16,7 +16,7 @@ module.exports = {
 	apiInjector: function (api) {
 		return function (req, res, next) {
 			const md5 = crypto.createHash('MD5');
-			md5.update(Math.random());
+			md5.update(Math.random().toString(10));
 			req.id = md5.digest('hex').substr(0, 8).toUpperCase();
 			req.api = api;
 			next();
@@ -49,6 +49,7 @@ module.exports = {
 		});
 		// eslint-disable-next-line max-params
 		return function (err, req, res, next) {
+			console.log(err);
 			logger.error({requestId: req.id, err: err});
 			next(err);
 		};

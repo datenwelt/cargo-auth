@@ -1,3 +1,4 @@
+/* eslint-disable callback-return */
 const express = require('express');
 const VError = require('verror');
 
@@ -6,7 +7,7 @@ const handle = require('../../utils/server-utils').asyncHandler;
 // eslint-disable-next-line new-cap
 const router = express.Router();
 
-router.post("/", handle(async function (req, res) {
+router.post("/", handle(async function (req, res, next) {
 	const body = req.body;
 	if ( !req.api || !req.api.AuthAPI ) {
 		throw new VError('Router for /login has no access to API.');
@@ -36,7 +37,15 @@ router.post("/", handle(async function (req, res) {
 		} else {
 			throw new VError(err, 'Unable to perform login for user "%s"', body.username);
 		}
+	} finally {
+		next();
 	}
 }));
+
+router.all('/', function(req, res, next) {
+	if ( !res.headersSent)
+		res.sendStatus(405);
+	next();
+});
 
 module.exports = router;

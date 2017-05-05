@@ -1,5 +1,6 @@
-/* eslint-disable no-console,no-process-env,no-process-exit */
+/* eslint-disable no-console,no-process-env,no-process-exit,max-params,handle-callback-err,no-unused-vars */
 const bluebird = require('bluebird');
+const cors = require('cors');
 const Promise = bluebird;
 const bodyParser = require('body-parser');
 const bunyan = require('bunyan');
@@ -95,22 +96,33 @@ class AuthServer extends Daemon {
 		return new Promise(function (resolve, reject) {
 			const app = express();
 			app.use(ServerUtils.apiInjector(this.config.api));
+			app.use(bodyParser.json());
+			app.use(cors());
+			app.options('*', cors());
 			app.use('/auth/login', AuthLoginRouter);
-			if ( this.config.logs && this.config.logs.access_log ) {
-				try {
-					app.use(ServerUtils.accessLog(this.config.logs.access_log));
-				} catch (err) {
-					return reject(new VError(err, "Unable to initialize access.log at %s", this.config.logs.access_log));
-				}
-			}
-			if ( this.config.logs && this.config.logs.error_log ) {
+			app.all('*', function (req, res, next) {
+				if (!res.headersSent)
+					res.sendStatus(404);
+				next();
+			});
+			if (this.config.logs && this.config.logs.error_log) {
 				try {
 					app.use(ServerUtils.errorLog(this.config.logs.error_log));
 				} catch (err) {
 					return reject(new VError(err, "Unable to initialize error.log at %s", this.config.logs.error_log));
 				}
 			}
-			app.use(bodyParser.json());
+			app.use(function (err, req, res, next) {
+				res.sendStatus(500);
+				next();
+			});
+			if (this.config.logs && this.config.logs.access_log) {
+				try {
+					app.use(ServerUtils.accessLog(this.config.logs.access_log));
+				} catch (err) {
+					return reject(new VError(err, "Unable to initialize access.log at %s", this.config.logs.access_log));
+				}
+			}
 			this.config.app = app;
 			const port = this.config.listen.port;
 			const addr = this.config.listen.address;
@@ -144,12 +156,14 @@ class AuthServer extends Daemon {
 	}
 
 	onApiEvent(event, ...args) {
-		if (event !== 'error') {
-			this.config.appLogger.info(event, ...args);
-		} else {
-			this.config.appLogger.error(...args);
-			if ( args.length && args[0] instanceof Error ) {
-				this.config.appLogger.trace(VError.fullStack(args[0]));
+		if (this.config.appLogger) {
+			if (event !== 'error') {
+				this.config.appLogger.info(event, ...args);
+			} else {
+				this.config.appLogger.error(...args);
+				if (args.length && args[0] instanceof Error) {
+					this.config.appLogger.trace(VError.fullStack(args[0]));
+				}
 			}
 		}
 	}
