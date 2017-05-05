@@ -9,8 +9,8 @@ const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 
 class AuthAPI extends API {
 
-	constructor(schema, rsaPrivateKey) {
-		super('io.cargohub.auth');
+	constructor(name, schema, rsaPrivateKey) {
+		super(name);
 		this.schema = schema;
 		this.rsaPrivateKey = rsaPrivateKey;
 	}

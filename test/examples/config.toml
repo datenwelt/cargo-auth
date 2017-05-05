@@ -9,3 +9,8 @@ workers = 4
     keyfile = "test/data/rsa/privkey.encrypted.pem"
     passphrase = "test123456"
 
+[logs]
+    logfile = "/tmp/app.log"
+    level = "DEBUG"
+    access_log = "/tmp/access.log"
+    error_log = "/tmp/error.log"
