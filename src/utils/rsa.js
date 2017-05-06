@@ -2,6 +2,7 @@
 const bluebird = require('bluebird');
 const fs = bluebird.promisifyAll(require('fs'));
 const crypto = require('crypto');
+const NodeRSA = require('node-rsa');
 const VError = require('verror');
 
 const BEGIN_RSA_PRIVATE_KEY = '-----BEGIN RSA PRIVATE KEY-----';
@@ -294,17 +295,19 @@ class PEMReader {
 
 class RSA {
 
-	async init(config) {
+	static async init(config) {
 		if (config.privateKey) {
 			let data = await fs.readFileAsync(config.privateKey, 'utf8');
 			let passphrase = config.passphrase;
-			this.privateKey = PEMReader.readPrivateKey(data, passphrase);
+			let privateKey = PEMReader.readPrivateKey(data, passphrase);
+			return new NodeRSA(privateKey);
 		}
 		if (config.publicKey) {
 			let data = await fs.readFileAsync(config.publicKey, 'utf8');
-			this.publicKey = PEMReader.readPublicKey(data);
+			let publicKey = PEMReader.readPublicKey(data);
+			return new NodeRSA(publicKey);
 		}
-		return this;
+		throw new VError('Configuration did not contain any key information.');
 	}
 
 	static readPrivateKey(stringOrBuffer, passphrase) {

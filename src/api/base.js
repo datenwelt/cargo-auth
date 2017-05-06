@@ -18,7 +18,7 @@ class BaseAPI extends API {
 		if (!config.rsa || !config.rsa.privateKey)
 			throw new VError('Missing section "db.rsa" with RSA private key in API configuration.');
 
-		this.rsa = await new RSA().init(config.rsa);
+		this.rsa = await RSA.init(config.rsa);
 		return this;
 	}
 

@@ -19,10 +19,6 @@
     path = "/auth/login"
     module = "src/server/auth/login.js"
 
-[server.routes.1]
-    path = "/auth/login2"
-    module = "src/server/auth/login.js"
-
 [rsa]
     privateKey = "test/data/rsa/privkey.encrypted.pem"
     passphrase = "test123456"
