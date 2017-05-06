@@ -4,7 +4,7 @@ const assert = require("chai").assert;
 const EventEmitter = require('eventemitter2').EventEmitter2;
 const VError = require("verror");
 
-const API = require("../../src/api");
+const API = require("../../src/utils/api");
 
 describe('api.js', function () {
 

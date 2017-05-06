@@ -2,50 +2,77 @@
 const express = require('express');
 const VError = require('verror');
 
-const handle = require('../../utils/server-utils').asyncHandler;
+const AuthAPI = require('../../api/auth');
+const Router = require('../../utils/router');
 
-// eslint-disable-next-line new-cap
-const router = express.Router();
+class AuthLoginRouter extends Router {
 
-router.post("/", handle(async function (req, res, next) {
-	const body = req.body;
-	if ( !req.api || !req.api.AuthAPI ) {
-		throw new VError('Router for /login has no access to API.');
+	constructor(serverName) {
+		super();
+		this.serverName = serverName;
 	}
-	const AuthAPI = req.api.AuthAPI;
-	try {
-		const session = await AuthAPI.login(body.username, body.password);
-		return res.send(200, session);
-	} catch (err) {
-		if ( err.name === 'CargoModelError' ) {
-			res.set('X-cargo-error', err.code);
-			switch (err.code) {
-				case 'ERR_USERNAME_INVALID':
-				case 'ERR_PASSWORD_INVALID':
-				case 'ERR_USERNAME_MISSING':
-				case 'ERR_PASSWORD_MISSING':
-					return res.sendStatus(400);
-				case 'ERR_UNKNOWN_USER':
-					return res.sendStatus(400);
-				case 'ERR_LOGIN_SUSPENDED':
-					return res.sendStatus(503);
-				case 'ERR_LOGIN_FAILED':
-					return res.sendStatus(403);
-				default:
-					return res.sendStatus(500);
-			}
-		} else {
-			throw new VError(err, 'Unable to perform login for user "%s"', body.username);
+
+	async init(config) {
+		try {
+			let apiName = this.serverName + ".auth";
+			this.api = new AuthAPI(apiName);
+			await this.api.init(config);
+		} catch (err) {
+			throw new VError(err, 'Unable to initialize new instance of AuthAPI');
 		}
-	} finally {
-		next();
+
+		// eslint-disable-next-line new-cap
+		const router = express.Router();
+		router.post("/", this.route(async function (req, res, next) {
+			const body = req.body;
+			try {
+				const session = await this.api.login(body.username, body.password);
+				return res.send(200, session);
+			} catch (err) {
+				if (err.name === 'CargoModelError') {
+					res.set('X-cargo-error', err.code);
+					switch (err.code) {
+						case 'ERR_USERNAME_INVALID':
+						case 'ERR_PASSWORD_INVALID':
+						case 'ERR_USERNAME_MISSING':
+						case 'ERR_PASSWORD_MISSING':
+							return res.sendStatus(400);
+						case 'ERR_UNKNOWN_USER':
+							return res.sendStatus(400);
+						case 'ERR_LOGIN_SUSPENDED':
+							return res.sendStatus(503);
+						case 'ERR_LOGIN_FAILED':
+							return res.sendStatus(403);
+						default:
+							return res.sendStatus(500);
+					}
+				} else {
+					throw new VError(err, 'Unable to perform login for user "%s"', body.username);
+				}
+			} finally {
+				next();
+			}
+		}.bind(this)));
+
+		router.all('/', function (req, res, next) {
+			if (!res.headersSent)
+				res.sendStatus(405);
+			next();
+		});
+		return router;
 	}
-}));
 
-router.all('/', function(req, res, next) {
-	if ( !res.headersSent)
-		res.sendStatus(405);
-	next();
-});
+	shutdown() {
+		if (this.api) {
+			try {
+				this.api.close();
+				// eslint-disable-next-line no-empty
+			} catch (err) {
+			}
+			this.api = null;
+		}
+	}
 
-module.exports = router;
+}
+
+module.exports = AuthLoginRouter;

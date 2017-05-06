@@ -1,19 +1,15 @@
-const check = require('../utils/check');
 const crypto = require('crypto');
-const API = require('../api');
 const VError = require('verror');
+
+const check = require('../utils/check');
+const BaseAPI = require('./base');
+const API = require('../utils/api');
 
 const ERR_UNKNOWN_USER = API.createError('ERR_UNKNOWN_USER');
 const ERR_LOGIN_SUSPENDED = API.createError('ERR_LOGIN_SUSPENDED');
 const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 
-class AuthAPI extends API {
-
-	constructor(name, schema, rsaPrivateKey) {
-		super(name);
-		this.schema = schema;
-		this.rsaPrivateKey = rsaPrivateKey;
-	}
+class AuthAPI extends BaseAPI {
 
 	async login(username, password, options) {
 		options = Object.assign({
@@ -32,6 +28,8 @@ class AuthAPI extends API {
 			throw err;
 		}
 		const schema = this.schema;
+		const rsaPrivateKey = this.rsa.privateKey;
+
 		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (!user) throw this.error(ERR_UNKNOWN_USER);
 		if (!user.get('Active')) {
@@ -45,8 +43,7 @@ class AuthAPI extends API {
 		if (hashed.toLowerCase() !== matches[2].toLowerCase()) {
 			throw this.error(ERR_LOGIN_FAILED);
 		}
-		const privateKey = this.rsaPrivateKey;
-		let session = await schema.model('Session').createForUser(user, privateKey, options);
+		let session = await schema.model('Session').createForUser(user, rsaPrivateKey, options);
 		this.emit(this.name + '.login', session);
 		return session;
 	}

@@ -1,49 +1,52 @@
+/* eslint-disable complexity, max-lines */
+const bluebird = require('bluebird');
+const fs = bluebird.promisifyAll(require('fs'));
 const crypto = require('crypto');
 const VError = require('verror');
 
 const BEGIN_RSA_PRIVATE_KEY = '-----BEGIN RSA PRIVATE KEY-----';
 const END_RSA_PRIVATE_KEY = '-----END RSA PRIVATE KEY-----';
 
-function Parser(input) {
-	
-	this.input = input;
-	this.pos = 0;
-	this.eof = false;
-	
-}
+class Parser {
 
-Parser.prototype.constructor = Parser;
-
-Parser.prototype.readline = function () {
-	if (this.eof || this.pos > this.input.length) {
-		this.eof = true;
-		return null;
+	constructor(input) {
+		this.input = input;
+		this.pos = 0;
+		this.eof = false;
 	}
-	let lineEnd = this.input.indexOf('\n', this.pos);
-	if (lineEnd === -1) {
-		lineEnd = this.input.length - 1;
-	}
-	lineEnd++;
-	let line = this.input.substring(this.pos, lineEnd);
-	this.pos = lineEnd;
-	line = line.trim();
-	return line;
-};
 
-Parser.prototype.skipUntil = function (match) {
-	const lineStart = this.pos;
-	while (!this.eof) {
-		const line = this.readline();
-		if (typeof match === 'string' && !line.startsWith(match)) continue;
-		if (!line.match(match)) continue;
-		this.pos = lineStart;
+	readline() {
+		if (this.eof || this.pos > this.input.length) {
+			this.eof = true;
+			return null;
+		}
+		let lineEnd = this.input.indexOf('\n', this.pos);
+		if (lineEnd === -1) {
+			lineEnd = this.input.length - 1;
+		}
+		lineEnd++;
+		let line = this.input.substring(this.pos, lineEnd);
+		this.pos = lineEnd;
+		line = line.trim();
 		return line;
 	}
-	return null;
-};
 
-const PEMReader = {
-	
+	skipUntil(match) {
+		const lineStart = this.pos;
+		while (!this.eof) {
+			const line = this.readline();
+			if (typeof match === 'string' && !line.startsWith(match)) continue;
+			if (!line.match(match)) continue;
+			this.pos = lineStart;
+			return line;
+		}
+		return null;
+	}
+
+}
+
+class PEMReader {
+
 	/**
 	 * Key derivation algorithm from OpenSSL. Generates a key from a passphrase with the
 	 * required byte length for use by a given cipher algorithm. Supported algorithms are:
@@ -72,14 +75,14 @@ const PEMReader = {
 	 *
 	 * @see https://wiki.openssl.org/index.php/Manual:EVP_BytesToKey(3)
 	 */
-	evpBytesToKey: function (passphrase, options) {
+	static evpBytesToKey(passphrase, options) {
 		options = Object.assign({
 			cipher: 'AES-128-CBC',
 			hash: 'MD5',
 			count: 1,
 			salt: Buffer.alloc(0),
 		}, options || {});
-		
+
 		// Key lengths and IV sizes for known algorithms.
 		const configs = {
 			'AES-128-CBC': {
@@ -107,34 +110,34 @@ const PEMReader = {
 				ivLength: 16
 			}
 		};
-		
+
 		// Convert passphrase to a byte buffer.
-		if ( typeof passphrase === 'string' ) {
+		if (typeof passphrase === 'string') {
 			passphrase = passphrase.length ? Buffer.from(passphrase) : Buffer.alloc(0);
 		}
 		if (!Buffer.isBuffer(passphrase)) {
 			throw new VError('Parameter "passphrase" must be a string or a buffer.');
 		}
-		
+
 		// Hash rounds (i.e. the "count" parameter from the EVP_bytesToKey()).
 		let hashRounds = options.count;
-		if ( hashRounds <= 0 ) {
+		if (hashRounds <= 0) {
 			throw new VError('Parameter "options.count" must be 1 or greater.');
 		}
 		hashRounds = Math.floor(hashRounds);
-		
+
 		const cipherAlgo = options.cipher;
 		const hashAlgo = options.hash;
-		
+
 		const config = configs[cipherAlgo.toUpperCase()];
 		if (!config) {
 			throw new VError('Unsupported cipher "%s". Supported: %j', cipherAlgo, configs.keys());
 		}
-		
+
 		// Override key and IV length if defined in the options parameter.
 		let keyLength = options.keyLength || config.keyLength;
 		let ivLength = options.ivLength || config.ivLength;
-		
+
 		// Create an 8 byte buffer for salt if there was a salt option. If no salt is used,
 		// create an empty buffer instead.
 		let salt = options.salt;
@@ -150,12 +153,12 @@ const PEMReader = {
 		if (salt.length > 8) {
 			salt = salt.slice(0, 8);
 		}
-		
+
 		// Find size of hash by digesting some crap.
 		let hash = crypto.createHash(hashAlgo);
 		hash.update('XXX');
 		const hashLength = hash.digest().length;
-		
+
 		// How many bytes are needed and how many iterations are required to get there?
 		const bytesNeeded = keyLength + ivLength;
 		const iterations = Math.ceil(bytesNeeded / hashLength);
@@ -186,10 +189,10 @@ const PEMReader = {
 			iteration++;
 		}
 		let key = keyAndIv.slice(0, keyLength);
-		let iv = keyAndIv.slice(keyLength, keyLength+ivLength);
-		return { key: key, iv: iv};
-	},
-	
+		let iv = keyAndIv.slice(keyLength, keyLength + ivLength);
+		return {key: key, iv: iv};
+	}
+
 	/**
 	 * Reads a PEM-encoded RSA private key from a buffer or string. It searches for the begin marker
 	 * "-----BEGIN RSA PRIVATE KEY----" and returns everything from there to the end marker. If the
@@ -198,7 +201,7 @@ const PEMReader = {
 	 * @param {(string|Buffer)} bufferOrString The string or Buffer containing the private key.
 	 * @param {string} [passphrase] An optional passphrase for descrpytion.
 	 */
-	readPrivateKey: function (bufferOrString, passphrase) {
+	static readPrivateKey(bufferOrString, passphrase) {
 		let input = bufferOrString;
 		if (Buffer.isBuffer(bufferOrString)) {
 			input = bufferOrString.toString('utf8');
@@ -207,9 +210,9 @@ const PEMReader = {
 		if (!parser.skipUntil(BEGIN_RSA_PRIVATE_KEY)) {
 			throw new VError('The input does not contain a PEM encoded private key');
 		}
-		
+
 		let privateKey = parser.readline();
-		
+
 		let line = parser.readline();
 		if (!line) {
 			throw new VError('The input ended unexpectedly after %s', BEGIN_RSA_PRIVATE_KEY);
@@ -217,7 +220,7 @@ const PEMReader = {
 		let matches = line.match(/^Proc-Type:\s+(.+)/);
 		if (matches) {
 			// Encrypted private key. Passphrase is needed.
-			if ( !passphrase ) {
+			if (!passphrase) {
 				throw new VError('Missing passphrase to decrypt private key.');
 			}
 
@@ -239,7 +242,7 @@ const PEMReader = {
 			}
 			const algo = matches[1];
 			const iv = Buffer.from(matches[2], 'hex');
-			
+
 			// Skip to end of header.
 			while ((line = parser.readline()) !== null) {
 				if (line === "") break;
@@ -247,10 +250,10 @@ const PEMReader = {
 			if (line !== "") {
 				throw new VError('Missing empty line after PEM header.');
 			}
-			
-			let { key: keyBuffer } = PEMReader.evpBytesToKey(passphrase, { cipher: algo, salt: iv });
+
+			let {key: keyBuffer} = PEMReader.evpBytesToKey(passphrase, {cipher: algo, salt: iv});
 			let decipher = crypto.createDecipheriv(algo, keyBuffer, iv);
-			
+
 			let data = "";
 			while ((line = parser.readline()) !== null) {
 				if (line.startsWith(END_RSA_PRIVATE_KEY)) break;
@@ -282,7 +285,38 @@ const PEMReader = {
 		}
 		return privateKey;
 	}
-	
-};
 
-module.exports = PEMReader;
+	static readPublicKey() {
+		throw new Error("Not implemented yet.");
+	}
+
+}
+
+class RSA {
+
+	async init(config) {
+		if (config.privateKey) {
+			let data = await fs.readFileAsync(config.privateKey, 'utf8');
+			let passphrase = config.passphrase;
+			this.privateKey = PEMReader.readPrivateKey(data, passphrase);
+		}
+		if (config.publicKey) {
+			let data = await fs.readFileAsync(config.publicKey, 'utf8');
+			this.publicKey = PEMReader.readPublicKey(data);
+		}
+		return this;
+	}
+
+	static readPrivateKey(stringOrBuffer, passphrase) {
+		return PEMReader.readPrivateKey(stringOrBuffer, passphrase);
+	}
+
+	static readPublicKey(stringOrBuffer) {
+		return PEMReader.readPublicKey(stringOrBuffer);
+	}
+
+}
+
+RSA.PEMReader = PEMReader;
+
+module.exports = RSA;

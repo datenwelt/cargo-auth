@@ -4,8 +4,19 @@ const VError = require('verror');
 class API extends EventEmitter {
 
 	constructor(name) {
-		super({wildcard: true, delimiter: '.', newListener: false,});
+		super({wildcard: true, delimiter: '.', newListener: false});
 		this.name = name;
+	}
+
+	// eslint-disable-next-line class-methods-use-this
+	async init() {
+		// Interface method
+	}
+
+	// eslint-disable-next-line require-await
+	async close() {
+		// Interface method
+		this.removeAllListeners();
 	}
 
 	error(err, cause) {

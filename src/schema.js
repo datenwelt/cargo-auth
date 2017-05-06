@@ -1,5 +1,5 @@
 const Sequelize = require('sequelize');
-const URI = require('urijs');
+const VError = require('verror');
 
 const Group = require('./schema/group');
 const GroupPermission = require('./schema/group-permission');
@@ -18,18 +18,30 @@ const UserPermission = require('./schema/user-permission');
 
 class Schema {
 
-	static async init(uri, options) {
-		// eslint-disable-next-line no-process-env
-		if (uri instanceof URI) {
-			uri = uri.toString();
+	constructor(name) {
+		if ( !name) {
+			throw new VError('Missing paramter #1 (name) in constructor call.');
 		}
+		this.name = name;
+	}
 
-		const config = Object.assign({
+	async init(config, options) {
+		if ( this.sequelize ) return this.sequelize;
+		options = Object.assign({
 			drop: false,
 			sync: false
 		}, options || {});
 
-		const sequelize = new Sequelize(uri, {
+		config.database = config.database || 'cargo_auth';
+		config.username = config.username ||'cargo';
+
+		config.options = config.options || {};
+
+		const sequelize = new Sequelize(config.database, config.username, config.password, {
+			dialect: config.type || 'mysql',
+			host: config.hostname,
+			port: config.port,
+			dialectOptions: config.options,
 			define: {
 				timestamps: false
 			},
@@ -71,19 +83,28 @@ class Schema {
 		Users.belongsToMany(Roles, {through: UserRoles});
 		Users.belongsToMany(Permissions, {through: UserPermissions});
 
-		if (config.drop) {
+		if (options.drop) {
 			await sequelize.dropAllSchemas();
 		}
 
-		await sequelize.sync({force: config.force});
+		await sequelize.sync({force: options.force});
 
 		await Organizations.findOrCreate({
 			where: {Name: 'PUBLIC'},
 			defaults: {Name: 'PUBLIC'}
 		});
+		this.sequelize = sequelize;
 		return sequelize;
 	}
 
+	close() {
+		if ( !this.sequelize) return;
+		this.sequelize.close();
+		this.sequelize = null;
+	}
+
 }
+
+Schema.schemas = {};
 
 module.exports = Schema;
