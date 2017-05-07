@@ -23,11 +23,12 @@ class CargoHttpServer extends Daemon {
 	}
 
 	clone() {
-		return new CargoHttpServer(this.name, this.options);
+		return new CargoHttpServer(this.name, this.configFile, this.options);
 	}
 
 	async init() {
 		const config = await Config.load(this.configFile);
+		const state = {};
 
 		let port = Number.parseInt(config.server.port || 80, 10);
 		if (Number.isNaN(port) || port <= 0) {
@@ -55,10 +56,10 @@ class CargoHttpServer extends Daemon {
 				let route = routeConfig.path;
 				let moduleSrc = routeConfig.module;
 				try {
-					if ( !route ) {
+					if (!route) {
 						throw new VError('Missing "path" in configuration for route #%s', routeIndex);
 					}
-					if ( !moduleSrc ) {
+					if (!moduleSrc) {
 						throw new VError('Missing "module" in configuration for route #%s', moduleSrc);
 					}
 					if (!path.isAbsolute(moduleSrc)) {
@@ -70,7 +71,7 @@ class CargoHttpServer extends Daemon {
 					let Router = require(moduleSrc);
 					let router = new Router(this.name);
 					// eslint-disable-next-line no-await-in-loop
-					this.app.use(route, await router.init(config));
+					this.app.use(route, await router.init(config, state));
 					this.routers.push(router);
 				} catch (err) {
 					throw new VError(err, '[%s] Unable to initialize router for route "%s" from module "%s". Skipping this route.', this.name, route, moduleSrc);
@@ -102,8 +103,8 @@ class CargoHttpServer extends Daemon {
 		});
 
 		if (config.server && config.server.access_log) {
+			let logfile = config.server.access_log;
 			try {
-				let logfile = config.server.access_log;
 				this.app.use(CargoHttpServer.createAccessLog(logfile));
 			} catch (err) {
 				throw new VError(err, "[%s] Unable to initialize access.log at %s", this.name, logfile);
@@ -121,22 +122,36 @@ class CargoHttpServer extends Daemon {
 				app.removeListener('error', errorListener);
 				reject(new VError(err, "Error listening on %s:%s", addr, port));
 			});
-			app.listen(port, addr, function () {
-				this.log_info('[%s] Server listening on %s:%d', this.name, addr, port);
+			// eslint-disable-next-line consistent-this
+			const self = this;
+			let listenReady = function(server) {
+				// eslint-disable-next-line no-invalid-this
+				app.server = server;
+				this.log_info('[%s] Server listening on %s:%d', self.name, addr, port);
 				app.removeListener('error', errorListener);
+			}.bind(this);
+			app.listen(port, addr, function () {
+				listenReady(this);
 				resolve();
-			}.bind(this));
+			});
 
 		}.bind(this));
 	}
 
-	async shutdown() {
-		if (this.routers) {
-			for (let router of this.routers) {
-				// eslint-disable-next-line no-await-in-loop
-				await router.shutdown();
+	shutdown() {
+		return new Promise(function(resolve) {
+			if (this.app && this.app.server) {
+				this.app.server.close(async function () {
+					if (this.routers) {
+						for (let router of this.routers) {
+							// eslint-disable-next-line no-await-in-loop
+							await router.shutdown();
+						}
+					}
+				}.bind(this));
 			}
-		}
+			resolve();
+		}.bind(this));
 	}
 
 	static createAccessLog(logfile) {

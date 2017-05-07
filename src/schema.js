@@ -23,6 +23,7 @@ class Schema {
 			throw new VError('Missing paramter #1 (name) in constructor call.');
 		}
 		this.name = name;
+		this.sequelize = null;
 	}
 
 	async init(config, options) {
@@ -94,7 +95,11 @@ class Schema {
 			defaults: {Name: 'PUBLIC'}
 		});
 		this.sequelize = sequelize;
-		return sequelize;
+		return this;
+	}
+
+	get() {
+		return this.sequelize;
 	}
 
 	close() {
@@ -104,7 +109,5 @@ class Schema {
 	}
 
 }
-
-Schema.schemas = {};
 
 module.exports = Schema;

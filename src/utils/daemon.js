@@ -48,16 +48,16 @@ class Daemon {
 			process.removeListener('SIGINT', this.handleSigint);
 			process.removeListener('SIGHUP', this.handleSighup);
 
-			this.log_info('Shutting down server [%s].', this.name);
+			this.log_info('[%s] Shutting down server.', this.name);
 			let graceTimeout = setTimeout(function () {
-				this.log_info('Shutdown of server [%s] did not finish within grace period (%s). Terminating.', this.name, this.shutdownGracePeriod);
+				this.log_info('[%s] Shutdown of server did not finish within grace period (%s). Terminating.', this.name, this.shutdownGracePeriod);
 				process.exit(0);
 			}.bind(this), ms(this.shutdownGracePeriod));
 			this.shutdown().then(function () {
 				clearTimeout(graceTimeout);
 				process.exit(0);
 			}).catch(function (err) {
-				this.log_error('Shutdown failed. Terminating: ' + err.message);
+				this.log_error('[%s] Shutdown failed. Terminating: %s', this.name, err.message);
 				this.log_debug(VError.fullStack(err));
 				process.exit(1);
 			}.bind(this));
@@ -72,19 +72,19 @@ class Daemon {
 			newInstance.isClone = true;
 
 			const startServer = function () {
-				this.log_info('Starting server [%s] on reload event', this.name);
+				this.log_info('[%s] Starting new server instance on reload event', this.name);
 				newInstance.run().then(function () {
-					this.log_info('Reload of server [%s] completed successfully.', this.name);
+					this.log_info('[%s] Reload completed successfully.', this.name);
 				}.bind(this)).catch(function (err) {
-					this.log_error('Reload of server [%s] failed: ' + err.message, this.name);
+					this.log_error('[%s] Reload failed: ' + err.message, this.name);
 					this.log_debug(VError.fullStack(err));
 				}.bind(this));
 			}.bind(this);
 
 			const shutdownServer = function () {
-				this.log_info('Shutting down server [%s] on reload event.', this.name);
+				this.log_info('[%s] Shutting down old server instance on reload event.', this.name);
 				let graceTimeout = setTimeout(function () {
-					this.log_warn('Shutdown of server [%s] did not finish within grace period (%s).', this.name, this.shutdownGracePeriod);
+					this.log_warn('[%s] Shutdown did not finish within grace period (%s).', this.name, this.shutdownGracePeriod);
 					if (this.dieOnInitFail) {
 						process.exit(1);
 						return;
@@ -96,7 +96,7 @@ class Daemon {
 					startServer();
 				}).catch(function (err) {
 					clearTimeout(graceTimeout);
-					this.log_error('Server shutdown failed: ' + err.message);
+					this.log_error('[%s] Server shutdown failed: ' + err.message, this.name);
 					this.log_debug(VError.fullStack(err));
 					if (this.dieOnInitFail) {
 						process.exit(1);
@@ -106,14 +106,16 @@ class Daemon {
 				}.bind(this));
 			}.bind(this);
 
-			this.log_info('Reload of server [%s].', this.name);
+			this.log_info('[%s] Reload initiated by SIGHUP.', this.name);
+			this.log_info('[%s] Initializing new server instance before shutdown of old instance.', this.name);
 			newInstance.init().then(function (config) {
 				newInstance.config = config;
 				shutdownServer();
 			}).catch(function (err) {
-				this.log_error('Unable to initialitze new instance for server [%s]: ' + err.message, this.name);
+				this.log_error('[%s] Unable to initialitze new server instance: ' + err.message, this.name);
+				this.log_debug(err);
 				if (this.dieOnInitFail) {
-					this.log_error('Terminatig.');
+					this.log_error('[%s] Terminatig.', this.name);
 					process.exit(1);
 				} else {
 					shutdownServer();

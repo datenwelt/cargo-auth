@@ -9,8 +9,12 @@ class API extends EventEmitter {
 	}
 
 	// eslint-disable-next-line class-methods-use-this
-	async init() {
-		// Interface method
+	init(config, state) {
+		if ( state ) {
+			state.apis = state.apis || {};
+			state.apis[this.name] = state.apis[this.name] || this;
+		}
+		return this;
 	}
 
 	// eslint-disable-next-line require-await

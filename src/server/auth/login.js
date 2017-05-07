@@ -10,13 +10,17 @@ class AuthLoginRouter extends Router {
 	constructor(serverName) {
 		super();
 		this.serverName = serverName;
+		this.api = null;
 	}
 
-	async init(config) {
+	async init(config, state) {
+		const apiName = this.serverName + ".auth";
 		try {
-			let apiName = this.serverName + ".auth";
-			this.api = new AuthAPI(apiName);
-			await this.api.init(config);
+			if (state && state.apis && state.apis[this.name]) {
+				this.api = state.apis[apiName];
+			} else {
+				this.api = await new AuthAPI(this.name).init(config, state);
+			}
 		} catch (err) {
 			throw new VError(err, 'Unable to initialize new instance of AuthAPI');
 		}
@@ -59,18 +63,18 @@ class AuthLoginRouter extends Router {
 				res.sendStatus(405);
 			next();
 		});
+
+		if (state) {
+			state.routers = state.routers || [];
+			state.routers.push(this);
+		}
+
 		return router;
 	}
 
 	shutdown() {
-		if (this.api) {
-			try {
-				this.api.close();
-				// eslint-disable-next-line no-empty
-			} catch (err) {
-			}
-			this.api = null;
-		}
+		if (this.api) this.api.close();
+		this.api = null;
 	}
 
 }
