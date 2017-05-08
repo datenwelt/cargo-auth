@@ -28,7 +28,7 @@ class AuthAPI extends BaseAPI {
 			throw err;
 		}
 		const schema = this.schema.get();
-		const rsaPrivateKey = this.rsa.privateKey;
+		const rsaPrivateKey = this.rsa.exportKey('private');
 
 		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (!user) throw this.error(ERR_UNKNOWN_USER);

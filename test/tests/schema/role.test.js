@@ -3,7 +3,7 @@ const it = require("mocha").it;
 const assert = require("chai").assert;
 const before = require("mocha").before;
 
-const SchemaUtils = require('../../test-utils/schema');
+const TestSchema = require('../../test-utils/test-schema');
 
 describe("schema/role.js", function () {
 
@@ -12,13 +12,13 @@ describe("schema/role.js", function () {
 
 	before(async function () {
 		try {
-			schema = await SchemaUtils.schema();
+			schema = await TestSchema.get();
 			if (!schema) return;
 		} catch (err) {
 			schema = null;
 		}
 		try {
-			db = await SchemaUtils.db();
+			db = await TestSchema.db();
 		} catch (err) {
 			db = null;
 		}
@@ -44,7 +44,7 @@ describe("schema/role.js", function () {
 			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('allowed', 30, 1, 'ListOwnCustomers');
 			`;
 			await db.query(prepareSql);
-			const model = schema.model('Role');
+			const model = schema.get().model('Role');
 			const role = await model.findOne({where: {'Id': 1}});
 			let permissions = await role.permissions();
 			assert.typeOf(permissions, 'array');

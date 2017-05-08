@@ -1,6 +1,6 @@
 const Promise = require('bluebird');
 
-const PEM = require('../../../src/utils/pemreader');
+const RSA = require('../../../src/utils/rsa');
 const fs = Promise.promisifyAll(require('fs'));
 
 const jwt = Promise.promisifyAll(require('jsonwebtoken'));
@@ -11,7 +11,7 @@ const it = require("mocha").it;
 const describe = require("mocha").describe;
 const expect = chai.expect;
 
-describe("utils/pemreader.js", function () {
+describe("utils/rsa.js", function () {
 
 	const unencryptedPrivateKey = `-----BEGIN RSA PRIVATE KEY-----
 MIIEowIBAAKCAQEA0ukwklDp1CUNOhZCraBZ8vT8EKVvXFNbJtkrX+tBF2zFckw8
@@ -41,12 +41,12 @@ tq0LbuT1N38IOpBDtqfMHlHHk9SRK/Mx0b6a0uATSb+1TYIZdgF3wdKmm9h4dVdy
 Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 -----END RSA PRIVATE KEY-----`;
 
-	describe("PEMReader.evpBytesToKey()", function () {
+	describe("RSA.evpBytesToKey()", function () {
 
 		it("generates the expected key and IV for AES-128-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const { key, iv } = PEM.evpBytesToKey(passphrase, {cipher: 'AES-128-CBC', salt: salt});
+			const { key, iv } = RSA.PEMReader.evpBytesToKey(passphrase, {cipher: 'AES-128-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254');
 			expect(iv.toString('hex')).to.equal('fa5277af059220de3ca0f9a2d2c30a1d');
 		});
@@ -54,7 +54,7 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 		it("generates the expected key and IV for AES-192-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'AES-192-CBC', salt: salt});
+			const {key, iv} = RSA.PEMReader.evpBytesToKey(passphrase, {cipher: 'AES-192-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254fa5277af059220de');
 			expect(iv.toString('hex')).to.equal('3ca0f9a2d2c30a1da0ed7665f278bdd6');
 		});
@@ -62,7 +62,7 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 		it("generates the expected key and IV for AES-256-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'AES-256-CBC', salt: salt});
+			const {key, iv} = RSA.PEMReader.evpBytesToKey(passphrase, {cipher: 'AES-256-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254fa5277af059220de3ca0f9a2d2c30a1d');
 			expect(iv.toString('hex')).to.equal('a0ed7665f278bdd69710ed632cb3917d');
 		});
@@ -70,7 +70,7 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 		it("generates the expected key and IV for DES-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'DES-CBC', salt: salt});
+			const {key, iv} = RSA.PEMReader.evpBytesToKey(passphrase, {cipher: 'DES-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2dd');
 			expect(iv.toString('hex')).to.equal('be5a19c8f1e08254');
 		});
@@ -78,7 +78,7 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 		it("generates the expected key and IV for DES-EDE3-CBC", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const {key, iv} = PEM.evpBytesToKey(passphrase, {cipher: 'DES-EDE3-CBC', salt: salt});
+			const {key, iv} = RSA.PEMReader.evpBytesToKey(passphrase, {cipher: 'DES-EDE3-CBC', salt: salt});
 			expect(key.toString('hex')).to.equal('747783301f72d2ddbe5a19c8f1e08254fa5277af059220de');
 			expect(iv.toString('hex')).to.equal('3ca0f9a2d2c30a1d');
 		});
@@ -86,7 +86,7 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 		it("generates the expected key and IV for arbitrary key and IV sizes with an alternative hash", function () {
 			const salt = "13F689619F77E4E55F68556C1A9FEEF8";
 			const passphrase = "test123456";
-			const {key, iv} = PEM.evpBytesToKey(passphrase, {
+			const {key, iv} = RSA.PEMReader.evpBytesToKey(passphrase, {
 				cipher: 'DES-EDE3-CBC',
 				salt: salt,
 				keyLength: 64,
@@ -100,23 +100,23 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 
 	});
 
-	describe("PEMReader.readPrivateKey()", function () {
+	describe("RSA.readPrivateKey()", function () {
 
 		it("reads an unencrypted private key", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.pem');
-			const privkey = PEM.readPrivateKey(data);
+			const privkey = RSA.readPrivateKey(data);
 			expect(privkey).to.equal(unencryptedPrivateKey);
 		});
 
 		it("reads an encrypted private key", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
-			const privkey = PEM.readPrivateKey(data, 'test123456');
+			const privkey = RSA.readPrivateKey(data, 'test123456');
 			expect(privkey).to.equal(unencryptedPrivateKey);
 		});
 
 		it("returns a private key usable by module 'jsonwebtokens'", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
-			const privkey = PEM.readPrivateKey(data, 'test123456');
+			const privkey = RSA.readPrivateKey(data, 'test123456');
 			await jwt.sign({}, privkey, {
 				expiresIn: "1d",
 				subject: "cargo-auth",
@@ -127,14 +127,14 @@ Z2n/LW9xVrQQiP+xiEWTlzgPiQXt/uynBCwPTWYino5Rsu3He5P0
 
 		it("returns a private key usable by module 'node-rsa'", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
-			const privkey = PEM.readPrivateKey(data, 'test123456');
+			const privkey = RSA.readPrivateKey(data, 'test123456');
 			const key = new NodeRSA();
 			key.importKey(privkey, 'private');
 		});
 
 		it("returns a private key usable by module 'node-rsa' for verification of JWTs", async function () {
 			const data = await fs.readFileAsync('test/data/rsa/privkey.encrypted.pem');
-			const privkey = PEM.readPrivateKey(data, 'test123456');
+			const privkey = RSA.readPrivateKey(data, 'test123456');
 			const key = new NodeRSA(privkey);
 			const pubkey = key.exportKey('public');
 			const token = await jwt.sign({

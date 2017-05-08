@@ -4,7 +4,7 @@ const it = require("mocha").it;
 const assert = require("chai").assert;
 const before = require("mocha").before;
 
-const SchemaUtils = require('../../test-utils/schema');
+const TestSchema = require('../../test-utils/test-schema');
 
 describe("schema/permission-bitmap.js", function () {
 
@@ -13,13 +13,13 @@ describe("schema/permission-bitmap.js", function () {
 
 	before(async function () {
 		try {
-			schema = await SchemaUtils.schema();
+			schema = await TestSchema.get();
 			if (!schema) return;
 		} catch (err) {
 			schema = null;
 		}
 		try {
-			db = await SchemaUtils.db();
+			db = await TestSchema.db();
 		} catch (err) {
 			db = null;
 		}
@@ -37,7 +37,7 @@ describe("schema/permission-bitmap.js", function () {
 			DELETE FROM PermissionBitmaps;
 			`;
 			await db.query(prepareSql);
-			const permissionBitmap = await schema.model('PermissionBitmap').createLatest();
+			const permissionBitmap = await schema.get().model('PermissionBitmap').createLatest();
 			assert.typeOf(permissionBitmap.Version, 'string');
 			assert.lengthOf(permissionBitmap.Version, 8);
 			assert.deepEqual(permissionBitmap.Permissions, 'Administrator,ListOrgCustomers,ListOwnCustomers');
@@ -59,7 +59,7 @@ describe("schema/permission-bitmap.js", function () {
 			DELETE FROM PermissionBitmaps;
 			`;
 			await db.query(prepareSql);
-			const bitmapVersion = await schema.model('PermissionBitmap').createLatest();
+			const bitmapVersion = await schema.get().model('PermissionBitmap').createLatest();
 			const bitmap = await bitmapVersion.permissionsToBitmap(['ListOrgCustomers', 'ListOwnCustomers']);
 			assert.strictEqual(bitmap, 3);
 		});
@@ -78,7 +78,7 @@ describe("schema/permission-bitmap.js", function () {
 			DELETE FROM PermissionBitmaps;
 			`;
 			await db.query(prepareSql);
-			const bitmapVersion = await schema.model('PermissionBitmap').createLatest();
+			const bitmapVersion = await schema.get().model('PermissionBitmap').createLatest();
 			const bitmap = 3;
 			const permissions = await bitmapVersion.bitmapToPermissions(bitmap);
 			assert.deepEqual(permissions, ['ListOrgCustomers', 'ListOwnCustomers']);

@@ -4,7 +4,7 @@ const it = require("mocha").it;
 const assert = require("chai").assert;
 const before = require("mocha").before;
 
-const SchemaUtils = require('../../test-utils/schema');
+const TestSchema = require('../../test-utils/test-schema');
 
 describe("schema/user.js", function () {
 
@@ -13,13 +13,13 @@ describe("schema/user.js", function () {
 
 	before(async function () {
 		try {
-			schema = await SchemaUtils.schema();
+			schema = await TestSchema.get();
 			if (!schema) return;
 		} catch (err) {
 			schema = null;
 		}
 		try {
-			db = await SchemaUtils.db();
+			db = await TestSchema.db();
 		} catch (err) {
 			db = null;
 		}
@@ -58,7 +58,7 @@ describe("schema/user.js", function () {
 			INSERT INTO UserPermissions (Mode, Prio, UserId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 			`;
 			await db.query(prepareSql);
-			let user = await schema.model('User').findOne({ where: {Id: 1}});
+			let user = await schema.get().model('User').findOne({ where: {Id: 1}});
 			let permissions = await user.permissions();
 			assert.typeOf(permissions, 'array');
 			assert.deepEqual(permissions, ['Administrator', 'ListOrgCustomers']);

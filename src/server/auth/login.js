@@ -31,7 +31,7 @@ class AuthLoginRouter extends Router {
 			const body = req.body;
 			try {
 				const session = await this.api.login(body.username, body.password);
-				return res.send(200, session);
+				return res.status(200).send(session);
 			} catch (err) {
 				if (err.name === 'CargoModelError') {
 					res.set('X-cargo-error', err.code);
@@ -51,6 +51,7 @@ class AuthLoginRouter extends Router {
 							return res.sendStatus(500);
 					}
 				} else {
+					res.sendStatus(500);
 					throw new VError(err, 'Unable to perform login for user "%s"', body.username);
 				}
 			} finally {

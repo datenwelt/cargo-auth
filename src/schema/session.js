@@ -63,7 +63,7 @@ module.exports = {
 						id: sessionId,
 						expiresIn: options.validFor,
 						issuedAt: iat.unix(),
-						userid: user.get('Id'),
+						userId: user.get('Id'),
 						username: user.get('Username'),
 						permissions: permissions,
 						secret: secret

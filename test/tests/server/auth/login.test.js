@@ -7,27 +7,32 @@ const assert = require("chai").assert;
 const superagent = require('superagent');
 
 const TestServer = require('../../../test-utils/test-server');
-const TestConfig = require('../../../test-utils/config');
-const ServerUtils = require('../../../../src/utils/server-utils');
-const AuthAPI = require('../../../../src/api/auth');
+const TestSchema = require('../../../test-utils/test-schema');
+const TestConfig = require('../../../test-utils/test-config');
 
-const login = require('../../../../src/server/auth/login');
+const AuthLoginRouter = require('../../../../src/server/auth/login');
 
 
 describe("server/auth/login.js", function () {
 
 	let path = "/login";
 
-	let config = null;
 	let app = null;
+	let config = null;
+	let db = null;
+	let schema = null;
 
-	before(async function() {
-		config = await TestConfig.init();
-		if ( !config.schema ) return;
+	before(async function () {
+		config = await TestConfig.get();
+		db = await TestSchema.db();
 		app = await TestServer.start();
-		let auth = new AuthAPI(config.schema, config.rsaPrivateKey);
-		app.use(ServerUtils.apiInjector({AuthAPI: auth}));
-		app.use(path, login);
+		schema = await TestSchema.get();
+		const router = new AuthLoginRouter('io.cargohub.auth');
+		const state = {
+			schemas: {cargo_auth: schema}
+		};
+		const appRouter = await router.init(config, state);
+		app.use(path, appRouter);
 		app.uri.path(path);
 
 		const sql = `
@@ -60,12 +65,12 @@ describe("server/auth/login.js", function () {
 			INSERT INTO UserPermissions (Mode, Prio, UserId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 			INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(2, 'testman-inactive', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 0);
 		`;
-		if ( config.db ) {
-			await config.db.query(sql);
+		if (db) {
+			await db.query(sql);
 		}
 	});
 
-	after(function() {
+	after(function () {
 
 	});
 
@@ -74,14 +79,136 @@ describe("server/auth/login.js", function () {
 
 		it("performs a login with valid credentials", async function () {
 			// eslint-disable-next-line no-invalid-this
-			if (!app || !config.schema) this.skip();
+			if (!app) this.skip();
 
 			let resp = await superagent.post(app.uri.toString())
 				.send({username: "testman", password: "test123456"});
-
-			assert.isTrue(true);
+			let body = resp.body;
+			assert.equal(body.username, 'testman');
+			assert.equal(body.expiresIn, '4h');
+			assert.equal(body.userId, 1);
+			assert.property(body, 'id');
+			assert.property(body, 'secret');
+			assert.property(body, 'token');
 		});
 
+		it('responds with status 400 when ERR_USERNAME_MISSING', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({password: "test123456"});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 400);
+				assert.equal(response.header['x-cargo-error'], 'ERR_USERNAME_MISSING');
+			}
+		});
+
+		it('responds with status 400 when ERR_USERNAME_INVALID', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({username: {test: 1}, password: "test123456"});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 400);
+				assert.equal(response.header['x-cargo-error'], 'ERR_USERNAME_INVALID');
+			}
+		});
+
+		it('responds with status 400 when ERR_PASSWORD_MISSING', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({username: 'testman'});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 400);
+				assert.equal(response.header['x-cargo-error'], 'ERR_PASSWORD_MISSING');
+			}
+		});
+
+		it('responds with status 400 when ERR_PASSWORD_INVALID', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({username: 'testman', password: {test: 1}});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 400);
+				assert.equal(response.header['x-cargo-error'], 'ERR_PASSWORD_INVALID');
+			}
+		});
+
+		it('responds with status 400 when ERR_UNKNOWN_USER', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({username: 'testman33', password: 'test123456'});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 400);
+				assert.equal(response.header['x-cargo-error'], 'ERR_UNKNOWN_USER');
+			}
+		});
+
+		it('responds with status 403 when ERR_LOGIN_FAILED', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({username: 'testman', password: 'xxxx'});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 403);
+				assert.equal(response.header['x-cargo-error'], 'ERR_LOGIN_FAILED');
+			}
+		});
+
+		it('responds with status 503 when ERR_LOGIN_SUSPENDED', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.post(app.uri.toString())
+					.send({username: 'testman-inactive', password: 'test123456'});
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 503);
+				assert.equal(response.header['x-cargo-error'], 'ERR_LOGIN_SUSPENDED');
+			}
+		});
+
+		it('responds with status 405 when not using POST', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			try {
+				await superagent.get(app.uri.toString());
+			} catch (err) {
+				assert.property(err, 'response');
+				const response = err.response;
+				assert.equal(response.status, 405);
+			}
+		});
 	});
 
 
