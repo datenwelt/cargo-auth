@@ -1,7 +1,9 @@
 /* eslint-disable id-length */
 const _ = require('underscore');
+const bluebird = require('bluebird');
 const bunyan = require('bunyan');
 const crypto = require('crypto');
+const fs = bluebird.promisifyAll(require('fs'));
 const moment = require('moment');
 const os = require('os');
 const Promise = require('bluebird');
@@ -26,6 +28,7 @@ class CargoHttpServer extends Daemon {
 		this.configFile = configFile;
 		this.routers = [];
 		this.mq = null;
+		this.appLogger = null;
 	}
 
 	clone() {
@@ -80,8 +83,13 @@ class CargoHttpServer extends Daemon {
 					this.app.use(route, await router.init(config, state));
 					this.routers.push(router);
 				} catch (err) {
-					throw new VError(err, '[%s] Unable to initialize router for route "%s" from module "%s". Skipping this route.', this.name, route, moduleSrc);
+					this.log_error(err, '[%s] Unable to initialize router for route "%s" from module "%s". Skipping this route.', this.name, route, moduleSrc);
 				}
+			}
+		}
+		if (config.server && config.server.fail_without_routes) {
+			if (!this.routers || !this.routers.length) {
+				throw new VError('[%s] Server has no routes. Use config setting "server.fail_without_routes=false" to start anyways.', this.name);
 			}
 		}
 
@@ -117,6 +125,34 @@ class CargoHttpServer extends Daemon {
 			}
 		}
 
+		// Application log
+		if (config.logs && config.logs.logfile) {
+			const logfile = config.logs.logfile;
+			const level = config.logs.level || 'INFO';
+			try {
+				this.appLogger = bunyan.createLogger({
+					name: this.name,
+					streams: [{path: logfile, type: 'file'}],
+					level: level
+				});
+				for (let api of _.values(state.apis)) {
+					api.logger = this.appLogger;
+					api.onAny(function (event, ...args) {
+						if (event === 'error') {
+							this.appLogger.error(...args);
+							if (args[0] && args[0] instanceof Error) {
+								this.appLogger.debug(args[0]);
+							}
+						} else {
+							this.appLogger.info(...args);
+						}
+					}.bind(this));
+				}
+			} catch (err) {
+				throw new VError(err, "[%s] Unable to initialize application log at %s", this.name, logfile);
+			}
+		}
+
 		// Message Queue for API events.
 		if (config.mq && state.apis && _.keys(state.apis).length) {
 			try {
@@ -127,8 +163,18 @@ class CargoHttpServer extends Daemon {
 			for (let api of _.values(state.apis)) {
 				api.onAny(async function (event, data) {
 					if (event !== 'error') {
+						let channel = null;
 						try {
-							const channel = await this.mq.connectChannel();
+							channel = await this.mq.connectChannel();
+						} catch (err) {
+							this.log_error(err, '[%s] Unable to connect to message queue at %s', this.name, this.mq.uri);
+							this.log_info('Shutting down after fatal error.');
+							await this.shutdown();
+							// eslint-disable-next-line no-process-exit
+							process.exit(1);
+							return;
+						}
+						try {
 							// eslint-disable-next-line no-undefined
 							const json = JSON.stringify(data || {}, undefined, ' ');
 							const content = Buffer.from(json, 'utf8');

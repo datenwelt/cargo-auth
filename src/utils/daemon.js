@@ -139,8 +139,7 @@ class Daemon {
 	}
 
 	async reload() {
-		await
-			this.handleSighup();
+		await this.handleSighup();
 	}
 
 }

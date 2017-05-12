@@ -36,5 +36,6 @@ const logger = bunyan.createLogger({
 new Server(serverName, configFile, { logger: logger }).run().catch(function (err) {
 	console.error(err.message);
 	if (debug) console.error(VError.fullStack(err));
+	console.error('Exiting.');
 	process.exit(1);
 });

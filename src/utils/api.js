@@ -6,6 +6,13 @@ class API extends EventEmitter {
 	constructor(name) {
 		super({wildcard: true, delimiter: '.', newListener: false});
 		this.name = name;
+		this.logger = {
+			error: function() {},
+			info: function() {},
+			warn: function() {},
+			debug: function() {},
+			trace: function() {}
+		};
 	}
 
 	// eslint-disable-next-line class-methods-use-this
