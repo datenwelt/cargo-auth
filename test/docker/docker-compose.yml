@@ -4,3 +4,8 @@ services:
     build: ./mysql
     ports:
       - "13701:3306"
+  cargo-auth-rabbitmq:
+    build: ./rabbitmq
+    ports:
+      - "13702:5672"
+      - "13703:15672"

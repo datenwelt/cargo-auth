@@ -19,7 +19,7 @@ class AuthLoginRouter extends Router {
 			if (state && state.apis && state.apis[this.name]) {
 				this.api = state.apis[apiName];
 			} else {
-				this.api = await new AuthAPI(this.name).init(config, state);
+				this.api = await new AuthAPI(apiName).init(config, state);
 			}
 		} catch (err) {
 			throw new VError(err, 'Unable to initialize new instance of AuthAPI');

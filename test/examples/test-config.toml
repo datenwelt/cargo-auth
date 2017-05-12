@@ -27,3 +27,7 @@
     logfile = "/tmp/app.log"
     level = "DEBUG"
 
+[mq]
+    uri = "amqp://cargo:cargo@127.0.0.1:13702/cargo_auth"
+    exchange = "cargo"
+

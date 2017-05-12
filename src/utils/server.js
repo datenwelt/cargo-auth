@@ -1,5 +1,9 @@
+/* eslint-disable id-length */
+const _ = require('underscore');
 const bunyan = require('bunyan');
 const crypto = require('crypto');
+const moment = require('moment');
+const os = require('os');
 const Promise = require('bluebird');
 const VError = require('verror');
 
@@ -10,6 +14,7 @@ const path = require('path');
 
 const Config = require('./config');
 const Daemon = require('./daemon');
+const MQ = require('./mq');
 
 class CargoHttpServer extends Daemon {
 
@@ -20,6 +25,7 @@ class CargoHttpServer extends Daemon {
 		}
 		this.configFile = configFile;
 		this.routers = [];
+		this.mq = null;
 	}
 
 	clone() {
@@ -110,6 +116,35 @@ class CargoHttpServer extends Daemon {
 				throw new VError(err, "[%s] Unable to initialize access.log at %s", this.name, logfile);
 			}
 		}
+
+		// Message Queue for API events.
+		if (config.mq && state.apis && _.keys(state.apis).length) {
+			try {
+				this.mq = await new MQ().init(config.mq);
+			} catch (err) {
+				throw new VError(err, "[%s] Unable to connect to message queue at %s", this.name, config.uri);
+			}
+			for (let api of _.values(state.apis)) {
+				api.onAny(async function (event, data) {
+					if (event !== 'error') {
+						try {
+							const channel = await this.mq.connectChannel();
+							// eslint-disable-next-line no-undefined
+							const json = JSON.stringify(data || {}, undefined, ' ');
+							const content = Buffer.from(json, 'utf8');
+							channel.publish(this.mq.exchange, event, content, {
+								persistent: true,
+								contentType: 'application/json',
+								timestamp: moment().unix(),
+								appId: this.name + '@' + os.hostname()
+							});
+						} catch (err) {
+							this.log_error(err, "[%s] Unable publish API event '%s' to message qeue: %s", this.name, event, err.message);
+						}
+					}
+				}.bind(this));
+			}
+		}
 		return config;
 	}
 
@@ -124,13 +159,13 @@ class CargoHttpServer extends Daemon {
 			});
 			// eslint-disable-next-line consistent-this
 			const self = this;
-			let listenReady = function(server) {
-				// eslint-disable-next-line no-invalid-this
+			let listenReady = function (server) {
 				app.server = server;
 				this.log_info('[%s] Server listening on %s:%d', self.name, addr, port);
 				app.removeListener('error', errorListener);
 			}.bind(this);
 			app.listen(port, addr, function () {
+				// eslint-disable-next-line no-invalid-this
 				listenReady(this);
 				resolve();
 			});
@@ -139,7 +174,7 @@ class CargoHttpServer extends Daemon {
 	}
 
 	shutdown() {
-		return new Promise(function(resolve) {
+		return new Promise(function (resolve) {
 			if (this.app && this.app.server) {
 				this.app.server.close(async function () {
 					if (this.routers) {
@@ -150,6 +185,7 @@ class CargoHttpServer extends Daemon {
 					}
 				}.bind(this));
 			}
+			if (this.mq) this.mq.close();
 			resolve();
 		}.bind(this));
 	}
@@ -185,7 +221,6 @@ class CargoHttpServer extends Daemon {
 			next(err);
 		};
 	}
-
 
 }
 
