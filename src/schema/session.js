@@ -29,10 +29,6 @@ module.exports = {
 			Secret: {
 				type: Sequelize.STRING(32),
 				allowNull: false
-			},
-			Token: {
-				type: Sequelize.TEXT,
-				allowNull: false
 			}
 		}, {
 			classMethods: {
@@ -80,8 +76,7 @@ module.exports = {
 						Username: user.get('Username'),
 						IssuedAt: iat.toDate(),
 						ExpiresAt: exp.toDate(),
-						Secret: secret,
-						Token: session.token
+						Secret: secret
 					});
 					return session;
 				}

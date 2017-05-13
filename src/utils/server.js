@@ -1,9 +1,7 @@
 /* eslint-disable id-length */
 const _ = require('underscore');
-const bluebird = require('bluebird');
 const bunyan = require('bunyan');
 const crypto = require('crypto');
-const fs = bluebird.promisifyAll(require('fs'));
 const moment = require('moment');
 const os = require('os');
 const Promise = require('bluebird');
@@ -112,7 +110,8 @@ class CargoHttpServer extends Daemon {
 		// General error handler.
 		// eslint-disable-next-line handle-callback-err,max-params
 		this.app.use(function (err, req, res, next) {
-			res.sendStatus(500);
+			if (res.statusCode === 200) res.status(500);
+			if (!res.headersSent) res.send();
 			next();
 		});
 
@@ -250,7 +249,8 @@ class CargoHttpServer extends Daemon {
 			logContent.method = req.method;
 			logContent.url = req.originalUrl;
 			logContent.status = res.statusCode;
-			logger.info(logContent);
+			const cargoError = res.get('X-Cargo-Error') || "";
+			logger.info(logContent, cargoError);
 			next();
 		};
 

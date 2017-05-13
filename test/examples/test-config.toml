@@ -17,8 +17,8 @@
     fail_without_routes = true
 
 [server.routes.0]
-    path = "/auth/login"
-    module = "src/server/auth/login.js"
+    path = "/auth"
+    module = "src/server/auth.js"
 
 [rsa]
     privateKey = "test/data/rsa/privkey.encrypted.pem"

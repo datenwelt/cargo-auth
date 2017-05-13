@@ -296,18 +296,25 @@ class PEMReader {
 class RSA {
 
 	static async init(config) {
+		let rsa = null;
 		if (config.privateKey) {
 			let data = await fs.readFileAsync(config.privateKey, 'utf8');
 			let passphrase = config.passphrase;
 			let privateKey = PEMReader.readPrivateKey(data, passphrase);
-			return new NodeRSA(privateKey);
+			rsa = new NodeRSA(privateKey);
+			rsa.rsaPrivateKey = rsa.exportKey('private');
+			rsa.rsaPublicKey = rsa.exportKey('public');
 		}
 		if (config.publicKey) {
 			let data = await fs.readFileAsync(config.publicKey, 'utf8');
 			let publicKey = PEMReader.readPublicKey(data);
-			return new NodeRSA(publicKey);
+			rsa = new NodeRSA(publicKey);
+			rsa.rsaPrivateKey = null;
+			rsa.rsaPublicKey = rsa.exportKey('public');
 		}
-		throw new VError('Configuration did not contain any key information.');
+		if ( !rsa )
+			throw new VError('Configuration did not contain any key information.');
+		return rsa;
 	}
 
 	static readPrivateKey(stringOrBuffer, passphrase) {
