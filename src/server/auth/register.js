@@ -1,5 +1,3 @@
-const camelize = require('camelize');
-const changecase = require('change-case');
 const express = require('express');
 const Router = require('../../utils/router');
 const VError = require('verror');
@@ -28,29 +26,26 @@ class AuthRegisterRouter extends Router {
 				options.email = req.body.email;
 				delete req.body.email;
 				options.extra = req.body;
-				let activation = (await this.api.registerUser(username, options)).get();
-				let responseBody = {};
-				for ( let key of Object.keys(activation) ) {
-					let value = activation[key];
-					key = changecase.camelCase(key);
-					responseBody[key] = value;
-				}
-
-				return res.status(200).send(responseBody);
+				let activation = await this.api.registerUser(username, options);
+				return res.status(200).send(activation);
 			} catch (err) {
 				if (err.name === 'CargoModelError') {
 					res.set('X-Cargo-Error', err.code);
 					switch (err.code) {
-						case 'ERR_SESSION_ID_INVALID':
-						case 'ERR_SESSION_ID_MISSING':
+						case 'ERR_USERNAME_INVALID':
+						case 'ERR_USERNAME_MISSING':
+						case 'ERR_USERNAME_TOO_SHORT':
+						case 'ERR_USERNAME_TOO_LONG':
+						case 'ERR_PASSWORD_INVALID':
+						case 'ERR_PASSWORD_MISSING':
+						case 'ERR_PASSWORD_TOO_SHORT':
+						case 'ERR_PASSWORD_TOO_LONG':
+						case 'ERR_PASSWORD_TOO_WEAK':
+						case 'ERR_EMAIL_INVALID':
+						case 'ERR_EMAIL_MISSING':
 							return res.sendStatus(400);
-						case 'ERR_SESSION_EXPIRED':
-							return res.sendStatus(410);
-						case 'ERR_LOGIN_SUSPENDED':
-							return res.sendStatus(423);
-						case 'ERR_UNKNOWN_USER':
-						case 'ERR_UNKNOWN_SESSION':
-							return res.sendStatus(403);
+						case 'ERR_USERNAME_ALREADY_PRESENT':
+							return res.sendStatus(409);
 						default:
 							return res.sendStatus(500);
 					}

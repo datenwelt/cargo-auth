@@ -1,3 +1,6 @@
+/* eslint-disable new-cap */
+const changecase = require('change-case');
+const Moment = require('moment');
 const EventEmitter = require('eventemitter2').EventEmitter2;
 const VError = require('verror');
 
@@ -7,17 +10,22 @@ class API extends EventEmitter {
 		super({wildcard: true, delimiter: '.', newListener: false});
 		this.name = name;
 		this.logger = {
-			error: function() {},
-			info: function() {},
-			warn: function() {},
-			debug: function() {},
-			trace: function() {}
+			error: function () {
+			},
+			info: function () {
+			},
+			warn: function () {
+			},
+			debug: function () {
+			},
+			trace: function () {
+			}
 		};
 	}
 
 	// eslint-disable-next-line class-methods-use-this
 	init(config, state) {
-		if ( state ) {
+		if (state) {
 			state.apis = state.apis || {};
 			state.apis[this.name] = state.apis[this.name] || this;
 		}
@@ -52,6 +60,43 @@ class API extends EventEmitter {
 		error.model = model;
 		return error;
 	}
+
+	static serialize(data) {
+		if (data instanceof Date) {
+			return Moment(data).toISOString();
+		}
+		if (data && data.toISOString) {
+			return data.toISOString();
+		}
+		if (typeof data === 'function') {
+			// eslint-disable-next-line no-undefined
+			return undefined;
+		}
+		// eslint-disable-next-line no-undefined
+		if (data === undefined || data === null || typeof data === 'string' || typeof data === 'number' || typeof data === 'boolean') {
+			return data;
+		}
+		if (Array.isArray(data)) {
+			let result = [];
+			for (let idx = 0; idx < data.length; idx++) {
+				let value = data[idx];
+				result[idx] = API.serialize(value);
+			}
+			return result;
+		}
+		let keys = Object.keys(data);
+		let result = {};
+		for (let key of keys) {
+			let value = data[key];
+			// eslint-disable-next-line no-undefined
+			if ( value !== undefined) {
+				key = changecase.camel(key);
+				result[key] = API.serialize(value);
+			}
+		}
+		return result;
+	}
+
 }
 
 module.exports = API;

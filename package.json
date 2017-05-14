@@ -31,8 +31,6 @@
     "bluebird": "^3.5.0",
     "body-parser": "^1.17.1",
     "bunyan": "^1.8.10",
-    "camelcase": "^4.1.0",
-    "camelize": "^1.0.0",
     "change-case": "^3.0.1",
     "cors": "^2.8.3",
     "eventemitter2": "^4.1.0",

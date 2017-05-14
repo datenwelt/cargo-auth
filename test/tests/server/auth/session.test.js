@@ -38,7 +38,9 @@ describe("server/auth/session.js", function () {
 			const response = err.response;
 			assert.equal(response.status, code);
 			assert.equal(response.header['x-cargo-error'], error);
+			return;
 		}
+		throw new Error('XMLHttpRequest was successful but should have failed.');
 	}
 
 	before(async function () {

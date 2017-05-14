@@ -18,6 +18,7 @@ INSERT INTO GroupRoles (Prio, GroupId, RoleId) VALUES(10, 1, 2);
 INSERT INTO GroupPermissions (Mode, Prio, GroupId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 DELETE FROM Sessions;
 DELETE FROM Users;
+DELETE FROM UserActivations;
 DELETE FROM UserPermissions;
 DELETE FROM UserRoles;
 DELETE FROM UserGroups;

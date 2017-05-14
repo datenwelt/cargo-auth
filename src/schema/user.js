@@ -1,6 +1,7 @@
 const check = require('../utils/check');
 const crypto = require('crypto');
 const Sequelize = require('sequelize');
+const VError = require('verror');
 
 module.exports = {
 
@@ -41,15 +42,34 @@ module.exports = {
 			}
 		}, {
 			classMethods: {
-				checkPassword: function (password) {
+				checkPassword: function (password, blacklist) {
+					blacklist = blacklist || [];
+
+					function complexity(value) {
+						let score = 0;
+						if (value.match(/[a-z]/)) score++;
+						if (value.match(/[A-Z]/)) score++;
+						if (value.match(/[0-9]/)) score++;
+						if (value.match(/[^0-9a-zA-Z]/)) score++;
+						if (score < 3) throw new Error();
+						return value;
+					}
+
+					function forbidden(value) {
+						if (blacklist.includes(value)) throw new Error();
+						return value;
+					}
+
 					password = check(password).trim('ERR_PASSWORD_INVALID')
 						.not().isBlank('ERR_PASSWORD_MISSING')
 						.minLength(6, 'ERR_PASSWORD_TOO_SHORT')
 						.maxLength(64, 'ERR_PASSWORD_TOO_LONG')
+						.transform(complexity, 'ERR_PASSWORD_TOO_WEAK')
+						.transform(forbidden, 'ERR_PASSWORD_INVALID')
 						.val();
 					return password;
 				},
-				createPassword: function(plaintext) {
+				createPassword: function (plaintext) {
 					const algo = 'SHA1';
 					let password = "{" + algo + "}";
 					password += crypto.createHash(algo).update(plaintext).digest('hex');

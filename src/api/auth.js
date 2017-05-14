@@ -1,4 +1,3 @@
-const camelize = require('camelize');
 const crypto = require('crypto');
 const VError = require('verror');
 const moment = require('moment');
@@ -107,8 +106,10 @@ class AuthAPI extends BaseAPI {
 				.minLength(6, 'ERR_USERNAME_TOO_SHORT')
 				.maxLength(255, 'ERR_USERNAME_TOO_LONG')
 				.val();
-			if (options.password) options.password = schema.model('User').checkPassword(options.password);
-			if (options.email) {
+			if (typeof options.password === 'string' || options.password) {
+				options.password = schema.model('User').checkPassword(options.password, [username]);
+			}
+			if (typeof options.email === 'string' || options.email) {
 				options.email = check(options.email).trim('ERR_EMAIL_INVALID')
 					.not().isBlank('ERR_EMAIL_MISSING')
 					.matches(/^.+@.+$/)
@@ -124,7 +125,7 @@ class AuthAPI extends BaseAPI {
 		if (options.password && !options.password.match(/^\{.+\}.*/))
 			options.password = schema.model('User').createPassword(options.password);
 
-		let user = await schema.model('User').findById(username);
+		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (user) throw this.error('ERR_USERNAME_ALREADY_PRESENT');
 
 		let activation = await schema.model('UserActivation').create({
@@ -136,15 +137,17 @@ class AuthAPI extends BaseAPI {
 			ExpiresAt: moment().add(ms(options.expiresIn)).toDate()
 		});
 
-		const payload = camelize(activation.get());
+		const payload = API.serialize(activation.get());
+		payload.token = payload.id;
+		delete payload.id;
+		payload.extra = JSON.parse(activation.Extra);
 		delete payload.password;
-		payload.extra = options.extra;
-		if (options.email) {
-			if (!this.mailer) throw new VError('Unable to send registration mail to %s, Mailer is not initialized.');
-			await this.mailer.sendRegistration(activation);
+		if (options.email && this.mailer) {
+			await this.mailer.sendRegistration(payload);
+			delete payload.token;
 		}
 		this.emit(this.name + ".user.register", payload);
-		return activation;
+		return payload;
 	}
 
 }

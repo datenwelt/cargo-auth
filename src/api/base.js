@@ -19,12 +19,12 @@ class BaseAPI extends API {
 				throw new VError('Missing section "db.cargo_auth" in API configuration.');
 			}
 			this.schema = await new Schema('cargo_auth').init(config.db.cargo_auth);
-			if ( state ) {
+			if (state) {
 				state.schemas = state.schemas || {};
 				state.schemas.cargo_auth = this.schema;
 			}
 		}
-		if ( state && state.rsa ) {
+		if (state && state.rsa) {
 			this.rsa = state.rsa;
 		} else {
 			if (!config.rsa || !config.rsa.privateKey)

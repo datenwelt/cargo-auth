@@ -34,7 +34,7 @@ describe('utils/mailer.js', function() {
 			await mailer.init(config);
 			assert.property(mailer, 'sendRegistration');
 			let promise = smtp.waitForMessage();
-			await mailer.sendRegistration({ Email: 'testman@test123456.de', Activation: '9cfa2d1a83ced85268c3a7358fe64ffe06572e3d' });
+			await mailer.sendRegistration({ email: 'testman@test123456.de', token: '9cfa2d1a83ced85268c3a7358fe64ffe06572e3d' });
 			let msg = await promise;
 			assert.include(msg.header.to.address, 'testman@test123456.de');
 			assert.include(msg[0], '9cfa2d1a83ced85268c3a7358fe64ffe06572e3d');

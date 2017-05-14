@@ -1,10 +1,10 @@
 From: noreply@cargohub.io
-To: {{Email}}
+To: {{email}}
 Subject: Your registration at cargohub.io
 
 Welcome to http://cargohub.io. This is your confirmation code:
 
-    {{Activation}}
+    {{token}}
 
 Regards from cargohub.io!
 
