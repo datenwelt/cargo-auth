@@ -3,6 +3,7 @@ const VError = require('verror');
 
 const AuthAPI = require('../api/auth');
 const AuthLoginRouter = require('./auth/login');
+const AuthRegistrationRouter = require('./auth/register');
 const AuthSessionRouter = require('./auth/session');
 const Router = require('../utils/router');
 
@@ -32,8 +33,10 @@ class AuthRouter extends Router {
 		const router = express.Router();
 		const loginRouter = await new AuthLoginRouter(this.serverName, this.api).init(config, state);
 		const sessionRouter = await new AuthSessionRouter(this.serverName, this.api).init(config, state);
+		const registrationRouter = await new AuthRegistrationRouter(this.serverName, this.api).init(config, state);
 		router.use('/login', loginRouter);
 		router.use('/session', sessionRouter);
+		router.use('/register', registrationRouter);
 		return router;
 	}
 

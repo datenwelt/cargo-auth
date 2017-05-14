@@ -11,6 +11,7 @@ const Role = require('./schema/role');
 const RolePermission = require('./schema/role-permission');
 const Session = require('./schema/session');
 const User = require('./schema/user');
+const UserActivation = require('./schema/user-activation');
 const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
 const UserOrganization = require('./schema/user-organisation');
@@ -61,6 +62,8 @@ class Schema {
 		const GroupRoles = GroupRole.define(sequelize);
 		const RolePermissions = RolePermission.define(sequelize);
 		const Users = User.define(sequelize);
+		// eslint-disable-next-line no-unused-vars
+		const UserActivations = UserActivation.define(sequelize);
 		const UserGroups = UserGroup.define(sequelize);
 		const UserRoles = UserRole.define(sequelize);
 		const UserPermissions = UserPermission.define(sequelize);

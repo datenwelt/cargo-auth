@@ -1,8 +1,12 @@
+const camelize = require('camelize');
 const crypto = require('crypto');
 const VError = require('verror');
 const moment = require('moment');
+const ms = require('ms');
 
 const check = require('../utils/check');
+const Mailer = require('../utils/mailer');
+
 const BaseAPI = require('./base');
 const API = require('../utils/api');
 
@@ -12,8 +16,18 @@ const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 const ERR_UNKNOWN_SESSION = API.createError('ERR_UNKNOWN_SESSION');
 const ERR_SESSION_EXPIRED = API.createError('ERR_SESSION_EXPIRED');
 
-
 class AuthAPI extends BaseAPI {
+
+	constructor(name) {
+		super(name);
+		this.mailer = null;
+	}
+
+	async init(config, state) {
+		await super.init(config, state);
+		if (config.smtp) this.mailer = await new Mailer().init(config, state);
+		return this;
+	}
 
 	async login(username, password, options) {
 		options = Object.assign({
@@ -48,7 +62,7 @@ class AuthAPI extends BaseAPI {
 			throw this.error(ERR_LOGIN_FAILED);
 		}
 		let session = await schema.model('Session').createForUser(user, rsaPrivateKey, options);
-		this.emit(this.name + '.login', session);
+		this.emit(this.name + '.session.create', session);
 		return session;
 	}
 
@@ -80,9 +94,57 @@ class AuthAPI extends BaseAPI {
 			throw this.error(ERR_LOGIN_SUSPENDED);
 		}
 		session = await schema.model('Session').createForUser(user, rsaPrivateKey, options);
-		this.emit(this.name + '.renew-session', session);
+		this.emit(this.name + '.session.renew', session);
 		return session;
+	}
 
+	async registerUser(username, options) {
+		const schema = this.schema.get();
+		options = Object.assign({expiresIn: '48h'}, options || {});
+		try {
+			username = check(username).trim('ERR_USERNAME_INVALID')
+				.not().isBlank('ERR_USERNAME_MISSING')
+				.minLength(6, 'ERR_USERNAME_TOO_SHORT')
+				.maxLength(255, 'ERR_USERNAME_TOO_LONG')
+				.val();
+			if (options.password) options.password = schema.model('User').checkPassword(options.password);
+			if (options.email) {
+				options.email = check(options.email).trim('ERR_EMAIL_INVALID')
+					.not().isBlank('ERR_EMAIL_MISSING')
+					.matches(/^.+@.+$/)
+					.val();
+			}
+			options.extra = options.extra || {};
+		} catch (err) {
+			if (err.name === 'CargoCheckError')
+				throw this.error(err.message);
+			throw err;
+		}
+
+		if (options.password && !options.password.match(/^\{.+\}.*/))
+			options.password = schema.model('User').createPassword(options.password);
+
+		let user = await schema.model('User').findById(username);
+		if (user) throw this.error('ERR_USERNAME_ALREADY_PRESENT');
+
+		let activation = await schema.model('UserActivation').create({
+			Id: schema.model('UserActivation').createId(),
+			Username: username,
+			Password: options.password,
+			Email: options.email,
+			Extra: JSON.stringify(options.extra),
+			ExpiresAt: moment().add(ms(options.expiresIn)).toDate()
+		});
+
+		const payload = camelize(activation.get());
+		delete payload.password;
+		payload.extra = options.extra;
+		if (options.email) {
+			if (!this.mailer) throw new VError('Unable to send registration mail to %s, Mailer is not initialized.');
+			await this.mailer.sendRegistration(activation);
+		}
+		this.emit(this.name + ".user.register", payload);
+		return activation;
 	}
 
 }

@@ -25,7 +25,7 @@ describe('utils/mq.js', function() {
 		it('connects to an RabbitMQ server and creates an exchange.', async function() {
 			if ( !mq ) return this.skip();
 			const testMq = await new MQ().init(config.mq);
-			const connection = testMq.get();
+			const connection = await testMq.connect();
 			assert.isDefined(connection);
 			const channel = await connection.createChannel();
 			await channel.checkExchange('cargo');

@@ -1,8 +1,12 @@
 /* eslint-disable no-process-env,no-process-exit,no-console */
-const bunyan = require('bunyan');
-const fs = require('fs');
+const Config = require('./utils/config');
+const Logger = require('js-logger');
+const moment = require('moment');
 const Server = require('./utils/server');
+const util = require('util');
 const VError = require('verror');
+
+moment.locale(process.env.CARGO_AUTH_LOCALE || "en");
 
 // Debug setting from ENV. If true, errors come with stack traces.
 let debug = process.env.CARGO_AUTH_DEBUG || false;
@@ -10,30 +14,19 @@ debug = !(!debug || debug === 'false' || debug === '0');
 
 
 const locations = [process.env.CARGO_AUTH_CONFIG, '~/.cargo/authd.conf', '/etc/cargo/authd.conf'];
-let configFile = null;
-for (configFile of locations) {
-	if (!configFile) continue;
-	// eslint-disable-next-line no-sync
-	let stats = fs.statSync(configFile);
-	if (!stats || !stats.isFile()) {
-		continue;
-	}
-	try {
-		// eslint-disable-next-line no-sync
-		fs.accessSync(configFile, 'r');
-	} catch (err) {
-		continue;
-	}
-	break;
-}
+let configFile = Config.find(locations);
 
 const serverName = process.env.CARGO_AUTH_APPNAME || 'io.cargohub.authd';
-const logger = bunyan.createLogger({
-	name: serverName,
-	level: debug ? 'DEBUG' : 'INFO'
+
+Logger.useDefaults({
+	defaultLevel: debug ? Logger.DEBUG : Logger.INFO,
+	formatter: function (messages) {
+		if ( messages[0] && typeof messages[0] === 'string')
+			messages[0] = util.format('[%s] [%s] ', moment().toString(), serverName) + messages[0];
+	}
 });
 
-new Server(serverName, configFile, { /*logger: logger*/ }).run().catch(function (err) {
+new Server(serverName, configFile, {logger: Logger}).run().catch(function (err) {
 	console.error(err.message);
 	if (debug) console.error(VError.fullStack(err));
 	console.error('Exiting.');

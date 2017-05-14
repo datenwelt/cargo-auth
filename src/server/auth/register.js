@@ -1,9 +1,10 @@
+const camelize = require('camelize');
+const changecase = require('change-case');
 const express = require('express');
+const Router = require('../../utils/router');
 const VError = require('verror');
 
-const Router = require('../../utils/router');
-
-class AuthSessionRouter extends Router {
+class AuthRegisterRouter extends Router {
 
 	constructor(serverName, api) {
 		super();
@@ -14,15 +15,28 @@ class AuthSessionRouter extends Router {
 	async init(config, state) {
 		await super.init(config, state);
 		if (!this.api) throw new VError('AuthAPI not initialized.');
-		const rsaPublicKey = this.api.rsa.rsaPublicKey;
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/renew", Router.requiresToken(rsaPublicKey));
-		router.post("/renew", Router.asyncRouter(async function (req, res, next) {
+		router.post("/", Router.asyncRouter(async function (req, res, next) {
+			const username = req.body.username;
+			delete req.body.username;
 			try {
-				const session = await this.api.renewSession(req.sessionId);
-				return res.status(200).send(session);
+				const options = {};
+				options.password = req.body.password;
+				delete req.body.password;
+				options.email = req.body.email;
+				delete req.body.email;
+				options.extra = req.body;
+				let activation = (await this.api.registerUser(username, options)).get();
+				let responseBody = {};
+				for ( let key of Object.keys(activation) ) {
+					let value = activation[key];
+					key = changecase.camelCase(key);
+					responseBody[key] = value;
+				}
+
+				return res.status(200).send(responseBody);
 			} catch (err) {
 				if (err.name === 'CargoModelError') {
 					res.set('X-Cargo-Error', err.code);
@@ -42,7 +56,7 @@ class AuthSessionRouter extends Router {
 					}
 				} else {
 					res.sendStatus(500);
-					throw new VError(err, 'Unable to renew session "%s"', req.sessionId);
+					throw new VError(err, 'Unable to register user "%s"', username);
 				}
 			} finally {
 				// eslint-disable-next-line callback-return
@@ -50,7 +64,7 @@ class AuthSessionRouter extends Router {
 			}
 		}.bind(this)));
 
-		router.all('*', function (req, res, next) {
+		router.all('/', function (req, res, next) {
 			if (!res.headersSent)
 				res.sendStatus(405);
 			next();
@@ -66,5 +80,4 @@ class AuthSessionRouter extends Router {
 
 }
 
-
-module.exports = AuthSessionRouter;
+module.exports = AuthRegisterRouter;

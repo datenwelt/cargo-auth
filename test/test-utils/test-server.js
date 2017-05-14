@@ -5,15 +5,15 @@ const URI = require('urijs');
 
 module.exports = {
 
-	start: function() {
-		return new Promise(function(resolve, reject) {
+	start: function () {
+		return new Promise(function (resolve, reject) {
 			const app = express();
-			app.on('error', function(err) {
+			app.on('error', function (err) {
 				app.removeAllListeners('error');
 				app.removeAllListeners('listening');
 				reject(err);
 			});
-			app.listen(function() {
+			app.listen(function () {
 				// eslint-disable-next-line no-invalid-this
 				app.server = this;
 				let uri = new URI('http://127.0.0.1/');

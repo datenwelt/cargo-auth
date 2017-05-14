@@ -1,0 +1,31 @@
+<component name="ProjectRunConfigurationManager">
+  <configuration default="false" name="Debug src/server.js" type="NodeJSConfigurationType" factoryName="Node.js" path-to-node="project" path-to-js-file="src/main.js" working-dir="$PROJECT_DIR$">
+    <envs>
+      <env name="CARGO_AUTH_CONFIG" value="test/examples/test-config.toml" />
+      <env name="CARGO_AUTH_DEBUG" value="true" />
+      <env name="CARGO_AUTH_LOCALE" value="de_de" />
+    </envs>
+    <EXTENSION ID="com.jetbrains.nodejs.remote.docker.NodeJSDockerRunConfigurationExtension">
+      <option name="envVars">
+        <list />
+      </option>
+      <option name="extraHosts">
+        <list />
+      </option>
+      <option name="links">
+        <list />
+      </option>
+      <option name="networkDisabled" value="false" />
+      <option name="networkMode" value="bridge" />
+      <option name="portBindings">
+        <list />
+      </option>
+      <option name="publishAllPorts" value="false" />
+      <option name="version" value="1" />
+      <option name="volumeBindings">
+        <list />
+      </option>
+    </EXTENSION>
+    <method />
+  </configuration>
+</component>

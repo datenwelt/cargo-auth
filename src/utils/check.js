@@ -60,7 +60,27 @@ const Check = {
 	trim: function(value, msg) {
 		value = this.string(msg).val().trim();
 		return chain(Check, value);
+	},
+
+	minLength: function(value, length, msg) {
+		value = this.string(msg).val();
+		if ( value.length < length ) throw error(msg);
+		return chain(Check, value);
+	},
+
+	maxLength: function(value, length, msg) {
+		value = this.string(msg).val();
+		if ( value.length > length ) throw error(msg);
+		return chain(Check, value);
+	},
+
+	matches: function(value, regex, msg) {
+		value = this.string(msg).val();
+		if ( !value.match(regex) ) throw error(msg);
+		return chain(Check, value);
 	}
+
+
 };
 
 module.exports = chain.bind(null, Check);

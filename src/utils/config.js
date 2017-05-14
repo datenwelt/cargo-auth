@@ -9,6 +9,26 @@ class Config {
 		return toml.parse(configContent);
 	}
 
+	static find(locations) {
+		let configFile = null;
+		for (configFile of locations) {
+			if (!configFile) continue;
+			// eslint-disable-next-line no-sync
+			let stats = fs.statSync(configFile);
+			if (!stats || !stats.isFile()) {
+				continue;
+			}
+			try {
+				// eslint-disable-next-line no-sync
+				fs.accessSync(configFile, 'r');
+			} catch (err) {
+				continue;
+			}
+			break;
+		}
+		return configFile;
+	}
+
 }
 
 module.exports = Config;

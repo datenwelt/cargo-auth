@@ -26,17 +26,21 @@ class Router {
 		return this.asyncRouter(async function (req, res, next) {
 			const authHeader = req.get('Authorization');
 			if (!authHeader) {
-				res.set('X-Cargo-Error', 'ERR_MISSING_AUTHORIZATION_HEADER').status(403);
-				throw new Error('ERR_MISSING_AUTHORIZATION_HEADER');
+				res.set('X-Cargo-Error', 'ERR_MISSING_AUTHORIZATION_HEADER')
+					.set('WWW-Authenticate', 'Bearer realm="Retrieve a session token by login first"').status(401);
+				throw new VError('ERR_MISSING_AUTHORIZATION_HEADER');
 			}
 			let [authType, authToken] = authHeader.split(/\s+/);
 			if (!authType || authType.toLowerCase() !== 'bearer') {
-				res.status(403).set('X-Cargo-Error', 'ERR_AUTHORIZATION_TYPE_NOT_SUPPORTED');
+				res.set('X-Cargo-Error', 'ERR_AUTHORIZATION_TYPE_NOT_SUPPORTED')
+					.set('WWW-Authenticate', 'Bearer realm="Retrieve a session token by login first"').status(401);
 				throw new Error('ERR_AUTHORIZATION_TYPE_NOT_SUPPORTED');
 			}
 			authToken = (authToken || "").trim();
 			if (!authToken) {
-				res.status(403).set('X-Cargo-Error', 'ERR_MISSING_AUTHORIZATION_TOKEN');
+				res.set('X-Cargo-Error', 'ERR_MISSING_AUTHORIZATION_TOKEN')
+					.set('WWW-Authenticate', 'Bearer realm="Retrieve a session token by login first"').status(401);
+
 				throw new Error('ERR_MISSING_AUTHORIZATION_TOKEN');
 			}
 			let payload = null;
@@ -48,7 +52,7 @@ class Router {
 					throw new Error('ERR_INVALID_AUTHORIZATION_TOKEN');
 				}
 				if (err.name === 'TokenExpiredError') {
-					res.status(403).set('X-Cargo-Error', 'ERR_EXPIRED_AUTHORIZATION_TOKEN');
+					res.status(409).set('X-Cargo-Error', 'ERR_EXPIRED_AUTHORIZATION_TOKEN');
 					throw new Error('ERR_EXPIRED_AUTHORIZATION_TOKEN');
 				}
 				throw new VError(err, 'Error validating token');

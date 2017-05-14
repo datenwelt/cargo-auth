@@ -73,7 +73,7 @@ class CargoHttpServer extends Daemon {
 						moduleSrc = path.join(process.cwd(), moduleSrc);
 						moduleSrc = path.normalize(moduleSrc);
 					}
-					this.log_info('[%s] Initializing router for route "%s" from "%s".', this.name, route, moduleSrc);
+					this.log_info('Initializing router for route "%s" from "%s".', route, moduleSrc);
 					// eslint-disable-next-line global-require
 					let Router = require(moduleSrc);
 					let router = new Router(this.name);
@@ -81,13 +81,13 @@ class CargoHttpServer extends Daemon {
 					this.app.use(route, await router.init(config, state));
 					this.routers.push(router);
 				} catch (err) {
-					this.log_error(err, '[%s] Unable to initialize router for route "%s" from module "%s". Skipping this route.', this.name, route, moduleSrc);
+					this.log_error(err, 'Unable to initialize router for route "%s" from module "%s". Skipping this route.', route, moduleSrc);
 				}
 			}
 		}
 		if (config.server && config.server.fail_without_routes) {
 			if (!this.routers || !this.routers.length) {
-				throw new VError('[%s] Server has no routes. Use config setting "server.fail_without_routes=false" to start anyways.', this.name);
+				throw new VError('Server has no routes. Use config setting "server.fail_without_routes=false" to start anyways.');
 			}
 		}
 
@@ -103,7 +103,7 @@ class CargoHttpServer extends Daemon {
 			try {
 				this.app.use(CargoHttpServer.createErrorLog(logfile));
 			} catch (err) {
-				throw new VError(err, "[%s] Unable to initialize error.log at %s", this.name, logfile);
+				throw new VError(err, "Unable to initialize error.log at %s", logfile);
 			}
 		}
 
@@ -120,7 +120,7 @@ class CargoHttpServer extends Daemon {
 			try {
 				this.app.use(CargoHttpServer.createAccessLog(logfile));
 			} catch (err) {
-				throw new VError(err, "[%s] Unable to initialize access.log at %s", this.name, logfile);
+				throw new VError(err, "Unable to initialize access.log at %s", logfile);
 			}
 		}
 
@@ -138,9 +138,11 @@ class CargoHttpServer extends Daemon {
 					api.logger = this.appLogger;
 					api.onAny(function (event, ...args) {
 						if (event === 'error') {
-							this.appLogger.error(...args);
 							if (args[0] && args[0] instanceof Error) {
-								this.appLogger.debug(args[0]);
+								this.appLogger.error(args[0].message);
+								this.appLogger.debug(...args);
+							} else {
+								this.appLogger.error(...args);
 							}
 						} else {
 							this.appLogger.info(...args);
@@ -148,7 +150,7 @@ class CargoHttpServer extends Daemon {
 					}.bind(this));
 				}
 			} catch (err) {
-				throw new VError(err, "[%s] Unable to initialize application log at %s", this.name, logfile);
+				throw new VError(err, "Unable to initialize application log at %s", logfile);
 			}
 		}
 
@@ -157,7 +159,7 @@ class CargoHttpServer extends Daemon {
 			try {
 				this.mq = await new MQ().init(config.mq);
 			} catch (err) {
-				throw new VError(err, "[%s] Unable to connect to message queue at %s", this.name, config.uri);
+				throw new VError(err, "Unable to connect to message queue at %s", config.uri);
 			}
 			for (let api of _.values(state.apis)) {
 				api.onAny(async function (event, data) {
@@ -166,7 +168,7 @@ class CargoHttpServer extends Daemon {
 						try {
 							channel = await this.mq.connectChannel();
 						} catch (err) {
-							this.log_error(err, '[%s] Unable to connect to message queue at %s', this.name, this.mq.uri);
+							this.log_error(err, 'Unable to connect to message queue at %s', this.mq.uri);
 							this.log_info('Shutting down after fatal error.');
 							await this.shutdown();
 							// eslint-disable-next-line no-process-exit
@@ -184,7 +186,7 @@ class CargoHttpServer extends Daemon {
 								appId: this.name + '@' + os.hostname()
 							});
 						} catch (err) {
-							this.log_error(err, "[%s] Unable publish API event '%s' to message qeue: %s", this.name, event, err.message);
+							this.log_error(err, "Unable publish API event '%s' to message qeue: %s", event, err.message);
 						}
 					}
 				}.bind(this));
@@ -206,7 +208,7 @@ class CargoHttpServer extends Daemon {
 			const self = this;
 			let listenReady = function (server) {
 				app.server = server;
-				this.log_info('[%s] Server listening on %s:%d', self.name, addr, port);
+				this.log_info('Server listening on %s:%d', addr, port);
 				app.removeListener('error', errorListener);
 			}.bind(this);
 			app.listen(port, addr, function () {

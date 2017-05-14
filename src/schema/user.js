@@ -1,3 +1,5 @@
+const check = require('../utils/check');
+const crypto = require('crypto');
 const Sequelize = require('sequelize');
 
 module.exports = {
@@ -23,7 +25,7 @@ module.exports = {
 			},
 			Email: {
 				type: Sequelize.STRING,
-				allowNull: false,
+				allowNull: true,
 				comment: 'Email address of the user for password recovery.'
 			},
 			Active: {
@@ -38,6 +40,22 @@ module.exports = {
 				comment: 'RSA public key of the user. (optional)'
 			}
 		}, {
+			classMethods: {
+				checkPassword: function (password) {
+					password = check(password).trim('ERR_PASSWORD_INVALID')
+						.not().isBlank('ERR_PASSWORD_MISSING')
+						.minLength(6, 'ERR_PASSWORD_TOO_SHORT')
+						.maxLength(64, 'ERR_PASSWORD_TOO_LONG')
+						.val();
+					return password;
+				},
+				createPassword: function(plaintext) {
+					const algo = 'SHA1';
+					let password = "{" + algo + "}";
+					password += crypto.createHash(algo).update(plaintext).digest('hex');
+					return password;
+				}
+			},
 			instanceMethods: {
 				permissions: async function (permissions) {
 					permissions = permissions || [];

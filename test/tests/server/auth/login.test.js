@@ -5,6 +5,11 @@ const before = require("mocha").before;
 const assert = require("chai").assert;
 
 const superagent = require('superagent');
+const jwt = require('jsonwebtoken');
+const Promise = require('bluebird');
+
+const AuthAPI = require('../../../../src/api/auth');
+const RSA = require('../../../../src/utils/rsa');
 
 const TestServer = require('../../../test-utils/test-server');
 const TestSchema = require('../../../test-utils/test-schema');
@@ -17,17 +22,23 @@ describe("server/auth/login.js", function () {
 
 	let path = "/login";
 
+	let api = null;
 	let app = null;
 	let config = null;
 	let db = null;
 	let schema = null;
+	let rsa = null;
 
 	before(async function () {
 		config = await TestConfig.get();
+		rsa = await RSA.init(config.rsa);
 		db = await TestSchema.db();
 		app = await TestServer.start();
 		schema = await TestSchema.get();
-		const router = new AuthLoginRouter('io.cargohub.auth');
+		api = new AuthAPI('io.carghub.authd.auth');
+		await api.init(config);
+
+		const router = new AuthLoginRouter('io.cargohub.auth', api);
 		const state = {
 			schemas: {cargo_auth: schema}
 		};
@@ -81,15 +92,45 @@ describe("server/auth/login.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
+			let eventPromise = new Promise(function(resolve, reject) {
+				let eventTimeout = setTimeout(function() {
+					clearTimeout(eventTimeout);
+					reject(new Error('Timeout waiting on event.'));
+				}, 2000);
+				api.onAny(function(event, session) {
+					clearTimeout(eventTimeout);
+					resolve({ event: event, session: session});
+				});
+			});
+
 			let resp = await superagent.post(app.uri.toString())
 				.send({username: "testman", password: "test123456"});
-			let body = resp.body;
-			assert.equal(body.username, 'testman');
-			assert.equal(body.expiresIn, '4h');
-			assert.equal(body.userId, 1);
-			assert.property(body, 'id');
-			assert.property(body, 'secret');
-			assert.property(body, 'token');
+			let session = resp.body;
+			assert.isDefined(session);
+			assert.typeOf(session, 'object');
+			assert.equal(session.username, 'testman');
+			assert.equal(session.expiresIn, '4h');
+			assert.equal(session.userId, 1);
+			assert.property(session, 'id');
+			assert.property(session, 'secret');
+			assert.property(session, 'token');
+			assert.deepEqual(session.permissions, ['Administrator', 'ListOrgCustomers']);
+			assert.strictEqual(session.expiresIn, '4h');
+			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
+			assert.strictEqual(session.username, 'testman');
+			assert.strictEqual(session.userId, 1);
+
+			const latestBitmap = await schema.get().model('PermissionBitmap').findLatest();
+			const token = session.token;
+			const publicKey = rsa.exportKey('public');
+			const payload = jwt.verify(token, publicKey);
+			assert.isDefined(payload);
+			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 6});
+			const eventData = await eventPromise;
+			assert.isDefined(eventData);
+			assert.equal(eventData.event, "io.carghub.authd.auth.session.create");
+			assert.deepEqual(eventData.session, session);
 		});
 
 		it('responds with status 400 when ERR_USERNAME_MISSING', async function () {
@@ -192,7 +233,7 @@ describe("server/auth/login.js", function () {
 			} catch (err) {
 				assert.property(err, 'response');
 				const response = err.response;
-				assert.equal(response.status, 503);
+				assert.equal(response.status, 423);
 				assert.equal(response.header['x-cargo-error'], 'ERR_LOGIN_SUSPENDED');
 			}
 		});

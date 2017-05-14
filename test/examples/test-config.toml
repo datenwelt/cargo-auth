@@ -32,3 +32,17 @@
     uri = "amqp://cargo:cargo@127.0.0.1:13702/cargo_auth"
     exchange = "cargo"
 
+[smtp]
+    server = "127.0.0.1"
+    port = 13704
+    secure = false
+
+    [smtp.auth]
+        user = "smtpout@dolatel.io"
+        pass = "chieshoaC8Ingoob"
+
+    [smtp.tls]
+        rejectUnauthorized = false
+
+[templates]
+    directory = "test/examples/templates"
