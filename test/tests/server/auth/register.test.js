@@ -22,7 +22,7 @@ const AuthRegistrationRouter = require('../../../../src/server/auth/register');
 
 describe("server/auth/register.js", function () {
 
-	let path = "/user/register";
+	let path = "/register";
 
 	let api = null;
 	let app = null;

@@ -150,6 +150,68 @@ class AuthAPI extends BaseAPI {
 		return payload;
 	}
 
+	async activateUser(token, options) {
+		options = options || {};
+		options.extra = options.extra || {};
+		// Check if token exists and is not expired yet.
+		const schema = this.schema.get();
+		try {
+			token = check(token).trim('ERR_TOKEN_INVALID')
+				.not().isBlank('ERR_TOKEN_MISSING')
+				.val();
+		} catch (err) {
+			if (err.name === 'CargoCheckError')
+				throw this.error(err.message);
+			throw err;
+		}
+		let activation = await schema.model('UserActivation').findById(token);
+		if (!activation) throw this.error('ERR_TOKEN_UNKOWN');
+		let expiresAt = moment(activation.get('ExpiresAt'));
+		if ( moment().isAfter(expiresAt) ) throw this.error('ERR_TOKEN_EXPIRED');
+
+		const username = activation.get('Username');
+		let password = activation.get('Password');
+		let email = activation.get('Email');
+		try {
+			if (typeof options.password === 'string' || options.password) {
+				password = schema.model('User').checkPassword(options.password, [username]);
+			}
+			if (typeof options.email === 'string' || options.email) {
+				email = check(options.email).trim('ERR_EMAIL_INVALID')
+					.not().isBlank('ERR_EMAIL_MISSING')
+					.matches(/^.+@.+$/)
+					.val();
+			}
+		} catch (err) {
+			if (err.name === 'CargoCheckError')
+				throw this.error(err.message);
+			throw err;
+		}
+
+		delete options.password;
+		delete options.email;
+		let extra = activation.get('Extra');
+		if ( extra ) extra = JSON.parse(extra);
+		extra = Object.assign(extra, options.extra);
+
+		if (!password) throw this.error('ERR_PASSWORD_MISSING');
+		if (!email) throw this.error('ERR_EMAIL_MISSING');
+		let user = await schema.model('User').findOne({where: {Username: username}});
+		if ( user ) throw this.error('ERR_USERNAME_ALREADY_PRESENT');
+		user = await schema.model('User').create({
+			Username: username,
+			Password: password,
+			Email: email,
+			Active: true
+		});
+		await activation.destroy();
+		const payload = API.serialize(user.get());
+		delete payload.password;
+		payload.extra = extra;
+		this.emit(this.name + ".activate", payload);
+		return payload;
+	}
+
 }
 
 module.exports = AuthAPI;

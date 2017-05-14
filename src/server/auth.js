@@ -2,6 +2,7 @@ const express = require('express');
 const VError = require('verror');
 
 const AuthAPI = require('../api/auth');
+const AuthActivateRouter = require('./auth/activate');
 const AuthLoginRouter = require('./auth/login');
 const AuthRegistrationRouter = require('./auth/register');
 const AuthRenewSessionRouter = require('./auth/renew');
@@ -31,9 +32,11 @@ class AuthRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
+		const activateRouter = await new AuthActivateRouter(this.serverName, this.api).init(config, state);
 		const loginRouter = await new AuthLoginRouter(this.serverName, this.api).init(config, state);
 		const sessionRouter = await new AuthRenewSessionRouter(this.serverName, this.api).init(config, state);
 		const registrationRouter = await new AuthRegistrationRouter(this.serverName, this.api).init(config, state);
+		router.use('/activate', activateRouter);
 		router.use('/login', loginRouter);
 		router.use('/renew', sessionRouter);
 		router.use('/register', registrationRouter);
