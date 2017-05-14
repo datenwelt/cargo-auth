@@ -61,7 +61,7 @@ class AuthAPI extends BaseAPI {
 			throw this.error(ERR_LOGIN_FAILED);
 		}
 		let session = await schema.model('Session').createForUser(user, rsaPrivateKey, options);
-		this.emit(this.name + '.session.create', session);
+		this.emit(this.name + '.login', session);
 		return session;
 	}
 
@@ -93,7 +93,7 @@ class AuthAPI extends BaseAPI {
 			throw this.error(ERR_LOGIN_SUSPENDED);
 		}
 		session = await schema.model('Session').createForUser(user, rsaPrivateKey, options);
-		this.emit(this.name + '.session.renew', session);
+		this.emit(this.name + '.login', session);
 		return session;
 	}
 
@@ -146,7 +146,7 @@ class AuthAPI extends BaseAPI {
 			await this.mailer.sendRegistration(payload);
 			delete payload.token;
 		}
-		this.emit(this.name + ".user.register", payload);
+		this.emit(this.name + ".register", payload);
 		return payload;
 	}
 

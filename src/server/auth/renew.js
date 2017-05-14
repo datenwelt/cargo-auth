@@ -3,7 +3,7 @@ const VError = require('verror');
 
 const Router = require('../../utils/router');
 
-class AuthSessionRouter extends Router {
+class AuthRenewSessionRouter extends Router {
 
 	constructor(serverName, api) {
 		super();
@@ -18,8 +18,8 @@ class AuthSessionRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/renew", Router.requiresToken(rsaPublicKey));
-		router.post("/renew", Router.asyncRouter(async function (req, res, next) {
+		router.post("/", Router.requiresToken(rsaPublicKey));
+		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			try {
 				const session = await this.api.renewSession(req.sessionId);
 				return res.status(200).send(session);
@@ -50,7 +50,7 @@ class AuthSessionRouter extends Router {
 			}
 		}.bind(this)));
 
-		router.all('*', function (req, res, next) {
+		router.all('/', function (req, res, next) {
 			if (!res.headersSent)
 				res.sendStatus(405);
 			next();
@@ -67,4 +67,4 @@ class AuthSessionRouter extends Router {
 }
 
 
-module.exports = AuthSessionRouter;
+module.exports = AuthRenewSessionRouter;

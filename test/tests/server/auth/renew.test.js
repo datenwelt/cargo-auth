@@ -16,12 +16,12 @@ const TestServer = require('../../../test-utils/test-server');
 const TestSchema = require('../../../test-utils/test-schema');
 const TestConfig = require('../../../test-utils/test-config');
 
-const AuthSessionRouter = require('../../../../src/server/auth/session');
+const AuthSessionRouter = require('../../../../src/server/auth/renew');
 
 
-describe("server/auth/session.js", function () {
+describe("server/auth/renew.js", function () {
 
-	let path = "/session";
+	let path = "/renew";
 
 	let api = null;
 	let app = null;
@@ -77,11 +77,13 @@ describe("server/auth/session.js", function () {
 
 	});
 
-	describe("POST /session/renew", function () {
+	describe("POST /auth/renew", function () {
 
 		it("renews a valid session", async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
+
+			let oldSession = await api.login("testman", "test123456");
 
 			let eventPromise = new Promise(function (resolve, reject) {
 				let eventTimeout = setTimeout(function () {
@@ -89,15 +91,13 @@ describe("server/auth/session.js", function () {
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
 				api.onAny(function (event, session) {
-					if (!event.endsWith('.session.renew')) return;
+					if (!event.endsWith('.auth.login')) return;
 					clearTimeout(eventTimeout);
 					resolve({event: event, session: session});
 				});
 			});
 
-			let oldSession = await api.login("testman", "test123456");
-
-			let resp = await superagent.post(app.uri.toString() + "/renew")
+			let resp = await superagent.post(app.uri.toString())
 				.set('Authorization', 'Bearer ' + oldSession.token)
 				.send();
 			let session = resp.body;
@@ -115,6 +115,8 @@ describe("server/auth/session.js", function () {
 			assert.strictEqual(session.username, 'testman');
 			assert.strictEqual(session.userId, 1);
 
+			assert.notEqual(session.id, oldSession.id);
+
 			const latestBitmap = await schema.get().model('PermissionBitmap').findLatest();
 			const token = session.token;
 			const publicKey = rsa.exportKey('public');
@@ -124,7 +126,7 @@ describe("server/auth/session.js", function () {
 			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 6});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
-			assert.equal(eventData.event, "io.carghub.authd.auth.session.renew");
+			assert.equal(eventData.event, "io.carghub.authd.auth.login");
 			assert.deepEqual(eventData.session, session);
 		});
 
@@ -132,7 +134,7 @@ describe("server/auth/session.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			await expectErrorResponse(401, 'ERR_MISSING_AUTHORIZATION_HEADER',
-				superagent.post(app.uri.toString() + "/renew")
+				superagent.post(app.uri.toString())
 					.send({}));
 		});
 
@@ -140,7 +142,7 @@ describe("server/auth/session.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			await expectErrorResponse(401, 'ERR_AUTHORIZATION_TYPE_NOT_SUPPORTED',
-				superagent.post(app.uri.toString() + "/renew")
+				superagent.post(app.uri.toString())
 					.set('Authorization', 'Basic 34567576567')
 					.send({}));
 		});
@@ -149,7 +151,7 @@ describe("server/auth/session.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			await expectErrorResponse(401, 'ERR_MISSING_AUTHORIZATION_TOKEN',
-				superagent.post(app.uri.toString() + "/renew")
+				superagent.post(app.uri.toString())
 					.set('Authorization', 'Bearer')
 					.send({}));
 		});
@@ -158,7 +160,7 @@ describe("server/auth/session.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			return expectErrorResponse(403, 'ERR_INVALID_AUTHORIZATION_TOKEN',
-				superagent.post(app.uri.toString() + "/renew")
+				superagent.post(app.uri.toString())
 					.set('Authorization', 'Bearer asdasdasdasd')
 					.send({}));
 		});

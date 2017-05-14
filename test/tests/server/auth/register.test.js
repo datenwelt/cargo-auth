@@ -80,7 +80,7 @@ describe("server/auth/register.js", function () {
 		smtp = null;
 	});
 
-	describe("POST /user/register", function () {
+	describe("POST /auth/register", function () {
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM UserActivations');
@@ -96,7 +96,7 @@ describe("server/auth/register.js", function () {
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
 				api.onAny(function (event, data) {
-					if (!event.endsWith('.user.register')) return;
+					if (!event.endsWith('.auth.register')) return;
 					clearTimeout(eventTimeout);
 					resolve({event: event, data: data});
 				});
@@ -124,7 +124,7 @@ describe("server/auth/register.js", function () {
 
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
-			assert.equal(eventData.event, "io.carghub.authd.auth.user.register");
+			assert.equal(eventData.event, "io.carghub.authd.auth.register");
 			assert.deepEqual(eventData.data, activation);
 
 			const msg = await mailPromise;
@@ -143,7 +143,7 @@ describe("server/auth/register.js", function () {
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
 				api.onAny(function (event, data) {
-					if (!event.endsWith('.user.register')) return;
+					if (!event.endsWith('.auth.register')) return;
 					clearTimeout(eventTimeout);
 					resolve({event: event, data: data});
 				});
@@ -165,7 +165,7 @@ describe("server/auth/register.js", function () {
 
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
-			assert.equal(eventData.event, "io.carghub.authd.auth.user.register");
+			assert.equal(eventData.event, "io.carghub.authd.auth.register");
 			assert.deepEqual(eventData.data, activation);
 
 		});
