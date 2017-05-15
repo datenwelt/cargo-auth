@@ -3,9 +3,11 @@ const it = require("mocha").it;
 const after = require("mocha").after;
 const before = require("mocha").before;
 const beforeEach = require("mocha").beforeEach;
+const afterEach = require("mocha").afterEach;
 const assert = require("chai").assert;
 
-const moment = require('moment');
+const sinon = require('sinon');
+
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 const superagent = require('superagent');
@@ -52,7 +54,7 @@ describe("server/auth/reset-password.js", function () {
 		smtp = await TestSmtp.get();
 
 		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config);
+		await api.init(config, {schemas: { cargo_auth: schema}});
 
 		const router = new AuthRouter('io.cargohub.auth', api);
 		const state = {
@@ -143,10 +145,18 @@ describe("server/auth/reset-password.js", function () {
 	describe("POST /auth/reset-password/:token", function () {
 
 		let token = null;
+		let UserModel = null;
+
 		beforeEach(async function () {
 			await db.query('DELETE FROM PasswordResets');
 			let passwordReset = await api.createPasswordReset('testman');
+			UserModel = schema.get().model('User');
 			token = passwordReset.token;
+			sinon.spy(UserModel, 'checkPassword');
+		});
+
+		afterEach(function() {
+			UserModel.checkPassword.restore();
 		});
 
 		it("resets the user password with a valid token", async function () {
@@ -165,14 +175,17 @@ describe("server/auth/reset-password.js", function () {
 				});
 			});
 
-			let user = await schema.get().model('User').findOne({ where: { Username: 'testman'}});
+			let user = await UserModel.findOne({ where: { Username: 'testman'}});
 			let oldPassword = user.get('Password');
-
+			let password = 'test.' + Math.floor(Math.random()*1000)+1000;
 			let resp = await superagent.post(app.uri.toString() + "/" + token).send({
-				password: 'test.' + Math.floor((Math.random()*100000)+100000)
+				password: password
 			});
+
 			let response = resp.body;
 			assert.isDefined(response);
+
+			assert.isTrue(UserModel.checkPassword.calledWith(password), "UserModel.checkPassword() has been called");
 
 			await user.reload();
 

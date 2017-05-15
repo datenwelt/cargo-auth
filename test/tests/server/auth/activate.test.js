@@ -1,11 +1,12 @@
 const describe = require("mocha").describe;
 const it = require("mocha").it;
 const after = require("mocha").after;
+const afterEach = require("mocha").afterEach;
 const before = require("mocha").before;
 const beforeEach = require("mocha").beforeEach;
 const assert = require("chai").assert;
+const sinon = require('sinon');
 
-const moment = require('moment');
 const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 const superagent = require('superagent');
@@ -52,7 +53,9 @@ describe("server/auth/activate.js", function () {
 		smtp = await TestSmtp.get();
 
 		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config);
+		await api.init(config, {
+			schemas: {cargo_auth: schema}
+		});
 
 		const router = new AuthRouter('io.cargohub.auth', api);
 		const state = {
@@ -83,6 +86,7 @@ describe("server/auth/activate.js", function () {
 	describe("POST /auth/activate", function () {
 
 		let token = null;
+		let UserModel = null;
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM UserActivations');
@@ -91,6 +95,12 @@ describe("server/auth/activate.js", function () {
 				password: 'test.123455'
 			});
 			token = activation.token;
+			UserModel = schema.get().model('User');
+			sinon.spy(UserModel, 'checkPassword');
+		});
+
+		afterEach(function() {
+			UserModel.checkPassword.restore();
 		});
 
 		it("activates the user with a valid token", async function () {
@@ -124,6 +134,19 @@ describe("server/auth/activate.js", function () {
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "io.carghub.authd.auth.activate");
 			assert.deepEqual(eventData.data, user);
+
+		});
+
+		it("calls UserModel.checkPassword() when a password is provided", async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			await superagent.post(app.uri.toString()).send({
+				token: token,
+				email: "testman44@testdomain.local",
+				password: "test.1234567"
+			});
+			assert.isTrue(UserModel.checkPassword.calledWith('test.1234567'), "UserModel.checkPassword() has been called.");
 
 		});
 

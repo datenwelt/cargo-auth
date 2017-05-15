@@ -1,9 +1,12 @@
+/* eslint-disable max-lines */
 const describe = require("mocha").describe;
 const it = require("mocha").it;
 const after = require("mocha").after;
+const afterEach = require("mocha").afterEach;
 const before = require("mocha").before;
 const beforeEach = require("mocha").beforeEach;
 const assert = require("chai").assert;
+const sinon = require("sinon");
 
 const moment = require('moment');
 const Promise = require('bluebird');
@@ -52,7 +55,9 @@ describe("server/auth/register.js", function () {
 		smtp = await TestSmtp.get();
 
 		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config);
+		await api.init(config,{
+			schemas: {cargo_auth: schema}
+		});
 
 		const router = new AuthRegistrationRouter('io.cargohub.auth', api);
 		const state = {
@@ -82,8 +87,16 @@ describe("server/auth/register.js", function () {
 
 	describe("POST /auth/register", function () {
 
+		let UserModel = null;
+
 		beforeEach(async function () {
 			await db.query('DELETE FROM UserActivations');
+			UserModel = schema.get().model('User');
+			sinon.spy(UserModel, 'checkPassword');
+		});
+
+		afterEach(function() {
+			UserModel.checkPassword.restore();
 		});
 
 		it("registers with an activation mail when used with email", async function () {
@@ -167,6 +180,18 @@ describe("server/auth/register.js", function () {
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "io.carghub.authd.auth.register");
 			assert.deepEqual(eventData.data, activation);
+
+		});
+
+		it("calls UserModel.checkPassword() when a password is provided", async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+
+			await superagent.post(app.uri.toString()).send({
+				username: "testman44@testdomain.local",
+				password: "test1234567."
+			});
+			assert.isTrue(UserModel.checkPassword.calledWith('test1234567.'), "UserModel.checkPassword() has been called.");
 
 		});
 
