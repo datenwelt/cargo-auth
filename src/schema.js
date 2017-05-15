@@ -5,6 +5,7 @@ const Group = require('./schema/group');
 const GroupPermission = require('./schema/group-permission');
 const GroupRole = require('./schema/group-role');
 const Organization = require('./schema/organization');
+const PasswordReset = require('./schema/password-reset');
 const Permission = require('./schema/permission');
 const PermissionBitmap = require('./schema/permission-bitmap');
 const Role = require('./schema/role');
@@ -14,7 +15,7 @@ const User = require('./schema/user');
 const UserActivation = require('./schema/user-activation');
 const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
-const UserOrganization = require('./schema/user-organisation');
+const UserOrganization = require('./schema/user-organization');
 const UserPermission = require('./schema/user-permission');
 
 class Schema {
@@ -55,6 +56,7 @@ class Schema {
 		const Organizations = Organization.define(sequelize);
 		const Roles = Role.define(sequelize);
 		const Groups = Group.define(sequelize);
+		const PasswordResets = PasswordReset.define(sequelize);
 		const Permissions = Permission.define(sequelize);
 		// eslint-disable-next-line no-unused-vars
 		const PermissionBitmaps = PermissionBitmap.define(sequelize);
@@ -82,6 +84,7 @@ class Schema {
 		Groups.belongsToMany(Roles, {through: GroupRoles});
 		Groups.belongsToMany(Users, {through: UserGroups});
 
+		Users.hasMany(PasswordResets);
 		Users.belongsToMany(Organizations, {through: UserOrganizations});
 		Users.belongsToMany(Groups, {through: UserGroups});
 		Users.belongsToMany(Roles, {through: UserRoles});

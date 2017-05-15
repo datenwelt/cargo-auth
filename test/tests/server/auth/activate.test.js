@@ -80,7 +80,7 @@ describe("server/auth/activate.js", function () {
 		smtp = null;
 	});
 
-	describe.only("POST /auth/activate", function () {
+	describe("POST /auth/activate", function () {
 
 		let token = null;
 
