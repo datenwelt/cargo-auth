@@ -1,5 +1,5 @@
-const API = require('../utils/api');
-const RSA = require('../utils/rsa');
+const API = require('@datenwelt/cargo-api').API;
+const RSA = require('@datenwelt/cargo-api').RSA;
 const Schema = require('../schema');
 const VError = require('verror');
 

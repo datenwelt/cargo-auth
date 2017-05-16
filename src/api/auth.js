@@ -3,11 +3,11 @@ const VError = require('verror');
 const moment = require('moment');
 const ms = require('ms');
 
-const check = require('../utils/check');
-const Mailer = require('../utils/mailer');
+const API = require('@datenwelt/cargo-api').API;
+const check = require('@datenwelt/cargo-api').Check;
+const Mailer = require('@datenwelt/cargo-api').Mailer;
 
 const BaseAPI = require('./base');
-const API = require('../utils/api');
 
 const ERR_UNKNOWN_USER = API.createError('ERR_UNKNOWN_USER');
 const ERR_LOGIN_SUSPENDED = API.createError('ERR_LOGIN_SUSPENDED');
@@ -15,7 +15,7 @@ const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 const ERR_UNKNOWN_SESSION = API.createError('ERR_UNKNOWN_SESSION');
 const ERR_SESSION_EXPIRED = API.createError('ERR_SESSION_EXPIRED');
 
-class AuthAPI extends BaseAPI {
+class AuthAPI extends BaseAPI {git
 
 	constructor(name) {
 		super(name);

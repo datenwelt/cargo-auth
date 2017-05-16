@@ -1,5 +1,5 @@
 {
-  "name": "cargo-auth",
+  "name": "@datenwelt/cargo-auth",
   "version": "0.1.0",
   "description": "Authentication API and library for projects by \"datenwelt it service AG\" and friends. ",
   "main": "src/server.js",
@@ -28,6 +28,7 @@
     "superagent": "^3.5.2"
   },
   "dependencies": {
+    "@datenwelt/cargo-api": "^0.2.3",
     "bluebird": "^3.5.0",
     "body-parser": "^1.17.1",
     "bunyan": "^1.8.10",

@@ -1,7 +1,7 @@
 const express = require('express');
 const VError = require('verror');
 
-const Router = require('../../utils/router');
+const Router = require('@datenwelt/cargo-api').Router;
 
 class AuthRenewSessionRouter extends Router {
 

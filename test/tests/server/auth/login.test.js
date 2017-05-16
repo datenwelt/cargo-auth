@@ -8,8 +8,9 @@ const superagent = require('superagent');
 const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 
+const RSA = require('@datenwelt/cargo-api').RSA;
+
 const AuthAPI = require('../../../../src/api/auth');
-const RSA = require('../../../../src/utils/rsa');
 
 const TestServer = require('../../../test-utils/test-server');
 const TestSchema = require('../../../test-utils/test-schema');

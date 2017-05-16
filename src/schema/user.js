@@ -1,7 +1,7 @@
-const check = require('../utils/check');
 const crypto = require('crypto');
 const Sequelize = require('sequelize');
-const VError = require('verror');
+
+const check = require('@datenwelt/cargo-api').Check;
 
 module.exports = {
 
