@@ -1,6 +1,6 @@
 {
   "name": "@datenwelt/cargo-auth",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Authentication API and library for projects by \"datenwelt it service AG\" and friends. ",
   "main": "src/server.js",
   "directories": {
