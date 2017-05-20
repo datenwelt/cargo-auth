@@ -1,8 +1,8 @@
 /* eslint-disable no-process-env,no-process-exit,no-console */
-const Config = require('./utils/config');
+const Config = require('@datenwelt/cargo-api').Config;
 const Logger = require('js-logger');
 const moment = require('moment');
-const Server = require('./utils/server');
+const Server = require('@datenwelt/cargo-api').Server;
 const util = require('util');
 const VError = require('verror');
 

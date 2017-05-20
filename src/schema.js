@@ -20,11 +20,7 @@ const UserPermission = require('./schema/user-permission');
 
 class Schema {
 
-	constructor(name) {
-		if ( !name) {
-			throw new VError('Missing paramter #1 (name) in constructor call.');
-		}
-		this.name = name;
+	constructor() {
 		this.sequelize = null;
 	}
 
@@ -40,7 +36,7 @@ class Schema {
 
 		config.options = config.options || {};
 
-		const sequelize = new Sequelize(config.database, config.username, config.password, {
+		this.sequelize = new Sequelize(config.database, config.username, config.password, {
 			dialect: config.type || 'mysql',
 			host: config.hostname,
 			port: config.port,
@@ -53,6 +49,15 @@ class Schema {
 			pool: true
 		});
 
+		await this.defineStructure();
+		if (options.drop) await this.sequelize.dropAllSchemas();
+		await this.sequelize.sync({force: options.force});
+		await this.defineData();
+		return this;
+	}
+
+	defineStructure() {
+		const sequelize = this.sequelize;
 		const Organizations = Organization.define(sequelize);
 		const Roles = Role.define(sequelize);
 		const Groups = Group.define(sequelize);
@@ -89,19 +94,14 @@ class Schema {
 		Users.belongsToMany(Groups, {through: UserGroups});
 		Users.belongsToMany(Roles, {through: UserRoles});
 		Users.belongsToMany(Permissions, {through: UserPermissions});
+	}
 
-		if (options.drop) {
-			await sequelize.dropAllSchemas();
-		}
-
-		await sequelize.sync({force: options.force});
-
+	async defineData() {
+		const Organizations = this.sequelize.model('Organization');
 		await Organizations.findOrCreate({
 			where: {Name: 'PUBLIC'},
 			defaults: {Name: 'PUBLIC'}
 		});
-		this.sequelize = sequelize;
-		return this;
 	}
 
 	get() {

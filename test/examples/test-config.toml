@@ -1,11 +1,11 @@
-[db.cargo_auth]
+[db]
     type = "mysql"
     database = "cargo_auth"
     username = "cargo"
     password = "chieshoaC8Ingoob"
     port = 13701
 
-    [db.cargo_auth.options]
+    [db.options]
         connectTimeout = 1000
         multipleStatements = true
 

@@ -54,12 +54,10 @@ describe("server/auth/reset-password.js", function () {
 		smtp = await TestSmtp.get();
 
 		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config, {schemas: { cargo_auth: schema}});
+		await api.init(config, {schema: schema});
 
 		const router = new AuthRouter('io.cargohub.auth', api);
-		const state = {
-			schemas: {cargo_auth: schema}
-		};
+		const state = {schema: schema};
 		const appRouter = await router.init(config, state);
 		app.use(path, appRouter);
 		// eslint-disable-next-line max-params
@@ -155,7 +153,7 @@ describe("server/auth/reset-password.js", function () {
 			sinon.spy(UserModel, 'checkPassword');
 		});
 
-		afterEach(function() {
+		afterEach(function () {
 			UserModel.checkPassword.restore();
 		});
 
@@ -175,9 +173,9 @@ describe("server/auth/reset-password.js", function () {
 				});
 			});
 
-			let user = await UserModel.findOne({ where: { Username: 'testman'}});
+			let user = await UserModel.findOne({where: {Username: 'testman'}});
 			let oldPassword = user.get('Password');
-			let password = 'test.' + Math.floor(Math.random()*1000)+1000;
+			let password = 'test.' + Math.floor(Math.random() * 1000) + 1000;
 			let resp = await superagent.post(app.uri.toString() + "/" + token).send({
 				password: password
 			});

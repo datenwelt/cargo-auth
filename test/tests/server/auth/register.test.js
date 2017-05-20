@@ -55,9 +55,7 @@ describe("server/auth/register.js", function () {
 		smtp = await TestSmtp.get();
 
 		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config,{
-			schemas: {cargo_auth: schema}
-		});
+		await api.init(config, {schema: schema});
 
 		const router = new AuthRegistrationRouter('io.cargohub.auth', api);
 		const state = {
@@ -95,7 +93,7 @@ describe("server/auth/register.js", function () {
 			sinon.spy(UserModel, 'checkPassword');
 		});
 
-		afterEach(function() {
+		afterEach(function () {
 			UserModel.checkPassword.restore();
 		});
 

@@ -12,17 +12,15 @@ class BaseAPI extends API {
 
 	async init(config, state) {
 		super.init(config, state);
-		if (state && state.schemas && state.schemas.cargo_auth) {
-			this.schema = state.schemas.cargo_auth;
+		if (state && state.schema) {
+			this.schema = state.schema;
 		} else {
-			if (!config.db || !config.db.cargo_auth) {
-				throw new VError('Missing section "db.cargo_auth" in API configuration.');
+			if (!config.db) {
+				throw new VError('Missing section "db" in API configuration.');
 			}
-			this.schema = await new Schema('cargo_auth').init(config.db.cargo_auth);
-			if (state) {
-				state.schemas = state.schemas || {};
-				state.schemas.cargo_auth = this.schema;
-			}
+			this.schema = await new Schema().init(config.db);
+			state = state || {};
+			state.schema = this.schema;
 		}
 		if (state && state.rsa) {
 			this.rsa = state.rsa;

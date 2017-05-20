@@ -15,7 +15,7 @@ class TestSchema {
 			return db;
 		}
 		try {
-			const config = (await TestConfig.get()).db.cargo_auth;
+			const config = (await TestConfig.get()).db;
 			const uri = new URI();
 			uri.scheme(config.type);
 			uri.hostname(config.host || "127.0.0.1");
@@ -43,7 +43,7 @@ class TestSchema {
 			if (!db) {
 				schema = false;
 			} else {
-				schema = await new Schema('cargo_auth').init(config.db.cargo_auth, {drop: true});
+				schema = await new Schema().init(config.db, {drop: true});
 			}
 		} catch (err) {
 			console.log(err);

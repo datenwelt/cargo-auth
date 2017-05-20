@@ -53,14 +53,10 @@ describe("server/auth/activate.js", function () {
 		smtp = await TestSmtp.get();
 
 		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config, {
-			schemas: {cargo_auth: schema}
-		});
+		await api.init(config, {schema: schema});
 
 		const router = new AuthRouter('io.cargohub.auth', api);
-		const state = {
-			schemas: {cargo_auth: schema}
-		};
+		const state = {schema: schema};
 		const appRouter = await router.init(config, state);
 		app.use(path, appRouter);
 		// eslint-disable-next-line max-params
@@ -99,7 +95,7 @@ describe("server/auth/activate.js", function () {
 			sinon.spy(UserModel, 'checkPassword');
 		});
 
-		afterEach(function() {
+		afterEach(function () {
 			UserModel.checkPassword.restore();
 		});
 

@@ -1,12 +1,13 @@
 const express = require('express');
 const VError = require('verror');
 
+const Router = require('@datenwelt/cargo-api').Router;
+
 const AuthAPI = require('../api/auth');
 const AuthActivateRouter = require('./auth/activate');
 const AuthLoginRouter = require('./auth/login');
 const AuthRegistrationRouter = require('./auth/register');
 const AuthRenewSessionRouter = require('./auth/renew');
-const Router = require('../utils/router');
 
 class AuthRouter extends Router {
 
