@@ -35,8 +35,8 @@ describe("schema/group.js", function () {
 			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
 			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
 			DELETE FROM Organizations;
-			INSERT INTO Organizations VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations VALUES(2, 'testorg', 'Test Org Inc.');
+			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
+			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
 			INSERT INTO Roles (id, name, organizationId) VALUES(1, 'TestRole', 2);
 			INSERT INTO Roles (id, name, organizationId) VALUES(2, 'TestRole2', 2);
@@ -50,6 +50,7 @@ describe("schema/group.js", function () {
 			INSERT INTO GroupPermissions (Mode, Prio, GroupId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 			`;
 			await db.query(prepareSql);
+
 			let group = await schema.get().model('Group').findOne({where: {Id: 1}});
 			let permissions = await group.permissions();
 			assert.typeOf(permissions, 'array');

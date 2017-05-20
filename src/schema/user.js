@@ -39,6 +39,18 @@ module.exports = {
 				type: Sequelize.TEXT,
 				allowNull: true,
 				comment: 'RSA public key of the user. (optional)'
+			},
+			Firstname: {
+				type: Sequelize.STRING,
+				allowNull: true
+			},
+			Lastname: {
+				type: Sequelize.STRING,
+				allowNull: true
+			},
+			Extra: {
+				type: Sequelize.TEXT,
+				allowNull: true
 			}
 		}, {
 			classMethods: {

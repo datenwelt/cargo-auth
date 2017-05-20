@@ -53,8 +53,8 @@ describe("server/auth/login.js", function () {
 			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
 			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
 			DELETE FROM Organizations;
-			INSERT INTO Organizations VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations VALUES(2, 'testorg', 'Test Org Inc.');
+			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
+			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
 			INSERT INTO Roles (id, name, organizationId) VALUES(1, 'TestRole', 2);
 			INSERT INTO Roles (id, name, organizationId) VALUES(2, 'TestRole2', 2);
