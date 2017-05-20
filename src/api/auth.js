@@ -15,7 +15,7 @@ const ERR_LOGIN_FAILED = API.createError('ERR_LOGIN_FAILED');
 const ERR_UNKNOWN_SESSION = API.createError('ERR_UNKNOWN_SESSION');
 const ERR_SESSION_EXPIRED = API.createError('ERR_SESSION_EXPIRED');
 
-class AuthAPI extends BaseAPI {git
+class AuthAPI extends BaseAPI {
 
 	constructor(name) {
 		super(name);

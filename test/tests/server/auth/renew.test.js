@@ -131,36 +131,36 @@ describe("server/auth/renew.js", function () {
 			assert.deepEqual(eventData.session, session);
 		});
 
-		it('responds with status 401 when ERR_MISSING_AUTHORIZATION_HEADER', async function () {
+		it('responds with status 401/ERR_UNAUTHENTICATED_ACCESS when Authorization header is missing', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(401, 'ERR_MISSING_AUTHORIZATION_HEADER',
+			await expectErrorResponse(401, 'ERR_UNAUTHENTICATED_ACCESS',
 				superagent.post(app.uri.toString())
 					.send({}));
 		});
 
-		it('responds with status 401 when ERR_AUTHORIZATION_TYPE_NOT_SUPPORTED', async function () {
+		it('responds with status 401/ERR_UNAUTHENTICATED_ACCESS when Authorization type is not supported', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(401, 'ERR_AUTHORIZATION_TYPE_NOT_SUPPORTED',
+			await expectErrorResponse(401, 'ERR_UNAUTHENTICATED_ACCESS',
 				superagent.post(app.uri.toString())
 					.set('Authorization', 'Basic 34567576567')
 					.send({}));
 		});
 
-		it('responds with status 401 when ERR_MISSING_AUTHORIZATION_TOKEN', async function () {
+		it('responds with status 401/ERR_UNAUTHENTICATED_ACCESS when Authorization token is missing', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(401, 'ERR_MISSING_AUTHORIZATION_TOKEN',
+			await expectErrorResponse(401, 'ERR_UNAUTHENTICATED_ACCESS',
 				superagent.post(app.uri.toString())
 					.set('Authorization', 'Bearer')
 					.send({}));
 		});
 
-		it('responds with status 401 when ERR_INVALID_AUTHORIZATION_TOKEN', function () {
+		it('responds with status 401/ERR_INVALID_AUTHORIZATION_TOKEN, ERR_UNAUTHENTICATED_ACCESS when token is invalid', function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			return expectErrorResponse(403, 'ERR_INVALID_AUTHORIZATION_TOKEN',
+			return expectErrorResponse(403, 'ERR_INVALID_AUTHORIZATION_TOKEN, ERR_UNAUTHENTICATED_ACCESS',
 				superagent.post(app.uri.toString())
 					.set('Authorization', 'Bearer asdasdasdasd')
 					.send({}));

@@ -18,7 +18,8 @@ class AuthRenewSessionRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/", Router.requiresToken(rsaPublicKey));
+		router.post("/", Router.checkSessionToken(rsaPublicKey));
+		router.post("/", Router.requiresAuthentication());
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			try {
 				const session = await this.api.renewSession(req.sessionId);
