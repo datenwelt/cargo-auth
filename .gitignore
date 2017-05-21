@@ -244,4 +244,6 @@ Icon
 Network Trash Folder
 Temporary Items
 .apdisk
-!/src/schema.js
+
+# Logfiles from test server
+test/data/logs/*.log
