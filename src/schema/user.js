@@ -89,37 +89,18 @@ module.exports = {
 				}
 			},
 			instanceMethods: {
-				permissions: async function (permissions) {
-					permissions = permissions || [];
+				permissions: async function () {
 					const userId = this.get('Id');
-					const userGroups = await this.sequelize.model('UserGroup').findAll({
-						where: {UserId: userId},
-						order: [['Prio', 'ASC']]
+					const userOrganizations = await this.sequelize.model('UserOrganization').findAll({
+						where: {UserId: userId}
 					});
-					for (let userGroup of userGroups) {
-						let groupId = userGroup.get('GroupId');
-						let group = this.sequelize.model('Group').build({Id: groupId});
+					let permissions = {};
+					for ( let userOrganization of userOrganizations ) {
+						let orgId = userOrganization.get('OrganizationId');
 						// eslint-disable-next-line no-await-in-loop
-						permissions = await group.permissions(permissions);
+						permissions[orgId] = await userOrganization.permissions([]);
 					}
-					const userRoles = await this.sequelize.model('UserRole').findAll({
-						where: {UserId: userId},
-						order: [['Prio', 'ASC']]
-					});
-					for (let userRole of userRoles) {
-						let roleId = userRole.get('RoleId');
-						let role = this.sequelize.model('Role').build({Id: roleId});
-						// eslint-disable-next-line no-await-in-loop
-						permissions = await role.permissions(permissions);
-					}
-					const userPermissions = await this.sequelize.model('UserPermission').findAll({
-						where: {UserId: userId}, order: [['Prio', 'ASC']]
-					});
-					const PermissionModel = await this.sequelize.model('Permission');
-					for (let userPermission of userPermissions) {
-						permissions = PermissionModel.applyPermissions(userPermission, permissions);
-					}
-					return permissions.sort();
+					return permissions;
 				}
 			}
 		});

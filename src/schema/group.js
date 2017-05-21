@@ -13,10 +13,14 @@ module.exports = {
 				type: Sequelize.STRING,
 				allowNull: false,
 				comment: 'Human readable name of the group.'
+			},
+			OrganizationId: {
+				type: Sequelize.INTEGER,
+				allowNull: false
 			}
 		}, {
 			instanceMethods: {
-				permissions: async function(permissions) {
+				permissions: async function (permissions) {
 					const groupId = this.get('Id');
 					permissions = permissions || [];
 					const groupRoles = await this.sequelize.model('GroupRole').findAll({

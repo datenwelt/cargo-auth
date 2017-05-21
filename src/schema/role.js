@@ -4,10 +4,10 @@ module.exports = {
 	define: function (schema) {
 		return schema.define('Role', {
 			Id: {
-				type: Sequelize.INTEGER,
+				// eslint-disable-next-line new-cap
+				type: Sequelize.STRING(25),
 				primaryKey: true,
-				autoIncrement: true,
-				comment: 'Unique numerical ID of the role.'
+				comment: 'Short textual ID of the rule like "admin" or "guest".'
 			},
 			Name: {
 				type: Sequelize.STRING,

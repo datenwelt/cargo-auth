@@ -32,7 +32,7 @@ module.exports = {
 			}
 		}, {
 			classMethods: {
-				createForUser: async function(user, rsaPrivateKey, options) {
+				createForUser: async function (user, rsaPrivateKey, options) {
 					options = Object.assign({validFor: '4h'}, options || {});
 
 					// Create a session id.
@@ -52,7 +52,10 @@ module.exports = {
 					if (!latestPBM) {
 						latestPBM = await schema.model('PermissionBitmap').createLatest();
 					}
-					const pbm = latestPBM.permissionsToBitmap(permissions);
+					const pbm = {};
+					for (let orgId of Object.keys(permissions)) {
+						pbm[orgId] = latestPBM.permissionsToBitmap(permissions[orgId]);
+					}
 					const iat = moment();
 					const exp = iat.add(ms(options.validFor), 'ms');
 					let session = {

@@ -16,6 +16,7 @@ const UserActivation = require('./schema/user-activation');
 const UserGroup = require('./schema/user-group');
 const UserRole = require('./schema/user-role');
 const UserOrganization = require('./schema/user-organization');
+// const UserOrganizationRole = require('./schema/user-organization-roles');
 const UserPermission = require('./schema/user-permission');
 
 class Schema {
@@ -25,14 +26,14 @@ class Schema {
 	}
 
 	async init(config, options) {
-		if ( this.sequelize ) return this.sequelize;
+		if (this.sequelize) return this.sequelize;
 		options = Object.assign({
 			drop: false,
 			sync: false
 		}, options || {});
 
 		config.database = config.database || 'cargo_auth';
-		config.username = config.username ||'cargo';
+		config.username = config.username || 'cargo';
 
 		config.options = config.options || {};
 
@@ -75,13 +76,15 @@ class Schema {
 		const UserRoles = UserRole.define(sequelize);
 		const UserPermissions = UserPermission.define(sequelize);
 		const UserOrganizations = UserOrganization.define(sequelize);
+		// const UserOrganizationRoles = UserOrganizationRole.define(sequelize);
 		// eslint-disable-next-line no-unused-vars
 		const Sessions = Session.define(sequelize);
 
 		Organizations.hasMany(Groups);
-		Organizations.hasMany(Roles);
+		Organizations.hasMany(Users);
+		// Organizations.hasMany(Roles);
 
-		Roles.belongsTo(Organizations);
+		// Roles.belongsTo(Organizations);
 		Roles.belongsToMany(Permissions, {through: RolePermissions});
 
 		Groups.belongsTo(Organizations);
@@ -91,9 +94,10 @@ class Schema {
 
 		Users.hasMany(PasswordResets);
 		Users.belongsToMany(Organizations, {through: UserOrganizations});
-		Users.belongsToMany(Groups, {through: UserGroups});
-		Users.belongsToMany(Roles, {through: UserRoles});
-		Users.belongsToMany(Permissions, {through: UserPermissions});
+		UserOrganizations.belongsToMany(Groups, {through: UserGroups, foreignKey: 'UserOrganizationId'});
+		UserOrganizations.belongsToMany(Roles, {through: UserRoles, foreignKey: 'UserOrganizationId'});
+		UserOrganizations.belongsToMany(Permissions, {through: UserPermissions, foreignKey: 'UserOrganizationId'});
+
 	}
 
 	async defineData() {
@@ -109,7 +113,7 @@ class Schema {
 	}
 
 	close() {
-		if ( !this.sequelize) return;
+		if (!this.sequelize) return;
 		this.sequelize.close();
 		this.sequelize = null;
 	}

@@ -63,7 +63,7 @@ describe("server/auth/renew.js", function () {
 		// eslint-disable-next-line max-params
 		app.use(function (err, req, res, next) {
 			// Suppress errors on console.
-			if ( res.headersSent ) return next(err);
+			if (res.headersSent) return next(err);
 			return res.send();
 		});
 		app.uri.path(path);
@@ -110,7 +110,9 @@ describe("server/auth/renew.js", function () {
 			assert.property(session, 'id');
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
-			assert.deepEqual(session.permissions, ['Administrator', 'ListOrgCustomers']);
+			assert.property(session, 'permissions');
+			assert.property(session.permissions, '2');
+			assert.deepEqual(session.permissions['2'], ['Administrator', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
@@ -124,7 +126,7 @@ describe("server/auth/renew.js", function () {
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 6});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {'2': 6}});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "io.carghub.authd.auth.login");

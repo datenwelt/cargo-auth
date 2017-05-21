@@ -56,8 +56,8 @@ describe("server/auth/login.js", function () {
 			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
 			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
-			INSERT INTO Roles (id, name, organizationId) VALUES(1, 'TestRole', 2);
-			INSERT INTO Roles (id, name, organizationId) VALUES(2, 'TestRole2', 2);
+			INSERT INTO Roles (id, name) VALUES(1, 'TestRole');
+			INSERT INTO Roles (id, name) VALUES(2, 'TestRole2');
 			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('denied', 10, 1, 'Administrator');
 			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('denied', 20, 1, 'ListOrgCustomers');
 			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('allowed', 30, 1, 'ListOwnCustomers');
@@ -68,13 +68,15 @@ describe("server/auth/login.js", function () {
 			INSERT INTO GroupPermissions (Mode, Prio, GroupId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 			DELETE FROM Sessions;
 			DELETE FROM Users;
+			DELETE FROM UserOrganizations;
 			DELETE FROM UserPermissions;
 			DELETE FROM UserRoles;
 			DELETE FROM UserGroups;
 			INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(1, 'testman', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 1);
-			INSERT INTO UserGroups (Prio, GroupId, UserId) VALUES(10, 1, 1);
-			INSERT INTO UserRoles (Prio, UserId, RoleId) VALUES(10, 1, 2);
-			INSERT INTO UserPermissions (Mode, Prio, UserId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
+			INSERT INTO UserOrganizations (Id, UserId, OrganizationId) VALUES (1, 1, 2);
+			INSERT INTO UserGroups (Prio, GroupId, UserOrganizationId) VALUES(10, 1, 1);
+			INSERT INTO UserRoles (Prio, UserOrganizationId, RoleId) VALUES(10, 1, 2);
+			INSERT INTO UserPermissions (Mode, Prio, UserOrganizationId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 			INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(2, 'testman-inactive', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 0);
 		`;
 		if (db) {
@@ -115,7 +117,9 @@ describe("server/auth/login.js", function () {
 			assert.property(session, 'id');
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
-			assert.deepEqual(session.permissions, ['Administrator', 'ListOrgCustomers']);
+			assert.property(session, 'permissions');
+			assert.property(session.permissions, '2');
+			assert.deepEqual(session.permissions[2], ['Administrator', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
@@ -127,7 +131,7 @@ describe("server/auth/login.js", function () {
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 6});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {'2': 6}});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "io.carghub.authd.auth.login");
