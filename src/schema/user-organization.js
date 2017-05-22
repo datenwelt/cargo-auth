@@ -45,6 +45,22 @@ module.exports = {
 						permissions = PermissionModel.applyPermissions(userPermission, permissions);
 					}
 					return permissions.sort();
+				},
+				roles: async function () {
+					let roles = [];
+					const userGroups = await this.getGroups();
+					for (let userGroup of userGroups) {
+						let groupId = userGroup.get('Id');
+						let group = this.sequelize.model('Group').build({Id: groupId});
+						// eslint-disable-next-line no-await-in-loop
+						let groupRoles = await group.roles();
+						roles = roles.concat(groupRoles);
+					}
+					const userRoles = await this.getRoles();
+					for (let userRole of userRoles) {
+						roles.push(userRole.get('Id'));
+					}
+					return roles;
 				}
 			}
 		});

@@ -15,10 +15,10 @@ module.exports = {
 				allowNull: false,
 				comment: 'Name of the organization.'
 			},
-			ShortName: {
-				// eslint-disable-next-line new-cap
-				type: Sequelize.STRING(40),
-				allowNull: true
+			Hostname: {
+				type: Sequelize.STRING,
+				allowNull: false,
+				unique: true
 			},
 			Address1: {
 				type: Sequelize.STRING,

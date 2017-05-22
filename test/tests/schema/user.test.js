@@ -1,8 +1,11 @@
-/* eslint-disable no-invalid-this */
+/* eslint-disable no-invalid-this,no-sync,consistent-return */
 const describe = require("mocha").describe;
 const it = require("mocha").it;
 const assert = require("chai").assert;
 const before = require("mocha").before;
+const beforeEach = require("mocha").beforeEach;
+
+const fs = require('fs');
 
 const TestSchema = require('../../test-utils/test-schema');
 
@@ -35,8 +38,8 @@ describe("schema/user.js", function () {
 			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
 			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
 			DELETE FROM Organizations;
-			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
+			INSERT INTO Organizations (id, name, hostname) VALUES(1, 'GLOBAL', 'global');
+			INSERT INTO Organizations (id, hostname, name) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
 			INSERT INTO Roles (id, name) VALUES(1, 'TestRole');
 			INSERT INTO Roles (id, name) VALUES(2, 'TestRole2');
@@ -60,12 +63,29 @@ describe("schema/user.js", function () {
 			INSERT INTO UserPermissions (Mode, Prio, UserOrganizationId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 			`;
 			await db.query(prepareSql);
-			let user = await schema.get().model('User').findOne({ where: {Id: 1}});
+			let user = await schema.get().model('User').findOne({where: {Id: 1}});
 			let permissions = await user.permissions();
-			assert.property(permissions, '2');
-			assert.typeOf(permissions[2], 'array');
-			assert.deepEqual(permissions[2], ['Administrator', 'ListOrgCustomers']);
+			assert.property(permissions, 'testorg');
+			assert.typeOf(permissions.testorg, 'array');
+			assert.deepEqual(permissions.testorg, ['Administrator', 'ListOrgCustomers']);
 		});
+	});
+
+	describe.only("roles()", function () {
+
+		beforeEach(async function () {
+			if (!db) return this.skip();
+			const sql = fs.readFileSync('test/data/sql/server-tests.sql', 'utf8');
+			await db.query(sql);
+		});
+
+		it("loads an object containing the organization specific roles.", async function() {
+			if ( !db ) return this.skip();
+			let user = await schema.get().model('User').findById(1);
+			let roles = await user.roles();
+			assert.isDefined(roles);
+		});
+
 	});
 
 });

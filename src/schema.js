@@ -100,13 +100,7 @@ class Schema {
 
 	}
 
-	async defineData() {
-		const Organizations = this.sequelize.model('Organization');
-		await Organizations.findOrCreate({
-			where: {Name: 'PUBLIC'},
-			defaults: {Name: 'PUBLIC'}
-		});
-	}
+	defineData() {}
 
 	get() {
 		return this.sequelize;

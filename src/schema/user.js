@@ -95,12 +95,29 @@ module.exports = {
 						where: {UserId: userId}
 					});
 					let permissions = {};
-					for ( let userOrganization of userOrganizations ) {
+					for (let userOrganization of userOrganizations) {
 						let orgId = userOrganization.get('OrganizationId');
+						let org = await this.sequelize.model('Organization').findById(orgId);
+						if (!org) continue;
 						// eslint-disable-next-line no-await-in-loop
-						permissions[orgId] = await userOrganization.permissions([]);
+						permissions[org.get('Hostname')] = await userOrganization.permissions([]);
 					}
 					return permissions;
+				},
+				roles: async function () {
+					const userId = this.get('Id');
+					const userOrganizations = await this.sequelize.model('UserOrganization').findAll({
+						where: {UserId: userId}
+					});
+					let roles = {};
+					for (let userOrganization of userOrganizations) {
+						let orgId = userOrganization.get('OrganizationId');
+						let organization = await this.sequelize.model('Organization').findById(orgId);
+						if (!organization) continue;
+						let userRoles = await userOrganization.roles();
+						roles[organization.get('Hostname')] = userRoles;
+					}
+					return roles;
 				}
 			}
 		});

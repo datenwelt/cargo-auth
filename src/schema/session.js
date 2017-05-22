@@ -53,8 +53,9 @@ module.exports = {
 						latestPBM = await schema.model('PermissionBitmap').createLatest();
 					}
 					const pbm = {};
-					for (let orgId of Object.keys(permissions)) {
-						pbm[orgId] = latestPBM.permissionsToBitmap(permissions[orgId]);
+					for (let hostname of Object.keys(permissions)) {
+						// eslint-disable-next-line no-await-in-loop
+						pbm[hostname] = latestPBM.permissionsToBitmap(permissions[hostname]);
 					}
 					const iat = moment();
 					const exp = iat.add(ms(options.validFor), 'ms');

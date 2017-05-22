@@ -53,8 +53,8 @@ describe("server/auth/login.js", function () {
 			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
 			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
 			DELETE FROM Organizations;
-			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
+			INSERT INTO Organizations (id, name, hostname) VALUES(1, 'GLOBAL', 'GLOBAL');
+			INSERT INTO Organizations (id, hostname, name) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
 			INSERT INTO Roles (id, name) VALUES(1, 'TestRole');
 			INSERT INTO Roles (id, name) VALUES(2, 'TestRole2');
@@ -118,8 +118,8 @@ describe("server/auth/login.js", function () {
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
 			assert.property(session, 'permissions');
-			assert.property(session.permissions, '2');
-			assert.deepEqual(session.permissions[2], ['Administrator', 'ListOrgCustomers']);
+			assert.property(session.permissions, 'testorg');
+			assert.deepEqual(session.permissions.testorg, ['Administrator', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
@@ -131,7 +131,7 @@ describe("server/auth/login.js", function () {
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {'2': 6}});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {'testorg': 6}});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "io.carghub.authd.auth.login");

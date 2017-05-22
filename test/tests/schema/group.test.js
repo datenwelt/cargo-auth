@@ -1,7 +1,11 @@
+/* eslint-disable no-invalid-this,consistent-return */
 const describe = require("mocha").describe;
 const it = require("mocha").it;
 const assert = require("chai").assert;
 const before = require("mocha").before;
+const beforeEach = require("mocha").beforeEach;
+
+const fs = require('fs');
 
 const TestSchema = require('../../test-utils/test-schema');
 
@@ -35,8 +39,8 @@ describe("schema/group.js", function () {
 			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
 			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
 			DELETE FROM Organizations;
-			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
+			INSERT INTO Organizations (id, name, hostname) VALUES(1, 'GLOBAL', 'GLOBAL');
+			INSERT INTO Organizations (id, name, hostname) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
 			INSERT INTO Roles (id, name) VALUES(1, 'TestRole');
 			INSERT INTO Roles (id, name) VALUES(2, 'TestRole2');
@@ -56,6 +60,25 @@ describe("schema/group.js", function () {
 			assert.typeOf(permissions, 'array');
 			assert.deepEqual(permissions, ['ListOrgCustomers', 'ListOwnCustomers']);
 		});
+	});
+
+	describe('roles()', function() {
+
+		beforeEach(async function() {
+			if ( !db ) return this.skip();
+			// eslint-disable-next-line no-sync
+			const sql = fs.readFileSync('test/data/sql/server-tests.sql', 'utf8');
+			await db.query(sql);
+		});
+
+		it('returns the correct set of roles for a specific group', async function() {
+			let group = await schema.get().model('Group').findById(1);
+			let roles = await group.roles();
+			assert.isDefined(roles);
+			assert.strictEqual(roles.length, 1);
+			assert.equal(roles[0], 'sysadmin');
+		});
+
 	});
 
 });

@@ -35,8 +35,8 @@ describe("schema/role.js", function () {
 			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
 			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
 			DELETE FROM Organizations;
-			INSERT INTO Organizations (id, name, shortname) VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations (id, name, shortname) VALUES(2, 'testorg', 'Test Org Inc.');
+			INSERT INTO Organizations (id, name, hostname) VALUES(1, 'GLOBAL', 'GLOBAL');
+			INSERT INTO Organizations (id, name, hostname) VALUES(2, 'testorg', 'Test Org Inc.');
 			DELETE FROM Roles;
 			INSERT INTO Roles (id, name) VALUES(1, 'TestRole');
 			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('denied', 10, 1, 'Administrator');
