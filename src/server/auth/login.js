@@ -17,6 +17,7 @@ class AuthLoginRouter extends Router {
 		if (!this.api) {
 			throw new VError('AuthAPI not initialized.');
 		}
+		if (config.server && config.server.errorHeader) this.errorHeader = config.server.errorHeader;
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
@@ -27,7 +28,7 @@ class AuthLoginRouter extends Router {
 				return res.status(200).send(session);
 			} catch (err) {
 				if (err.name === 'CargoModelError') {
-					res.set('X-Cargo-Error', err.code);
+					res.set(this.errorHeader, err.code);
 					switch (err.code) {
 						case 'ERR_USERNAME_INVALID':
 						case 'ERR_PASSWORD_INVALID':

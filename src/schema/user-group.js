@@ -3,8 +3,8 @@ const Sequelize = require('sequelize');
 module.exports = {
 	define: function (schema) {
 		return schema.define('UserGroup', {
-			UserOrganizationId: {
-				type: Sequelize.INTEGER
+			UserOriginId: {
+				type: Sequelize.STRING
 			},
 			Prio: {
 				type: Sequelize.INTEGER,

@@ -10,14 +10,11 @@ module.exports = {
 			Id: {
 				type: Sequelize.INTEGER,
 				primaryKey: true,
-				autoIncrement: true,
-				comment: 'Unique numerical ID of the user.'
+				autoIncrement: true
 			},
 			Username: {
 				type: Sequelize.STRING,
-				allowNull: false,
-				unique: true,
-				comment: 'Login username of the user.'
+				unique: true
 			},
 			Password: {
 				type: Sequelize.STRING,
@@ -34,23 +31,6 @@ module.exports = {
 				allowNull: false,
 				defaultValue: true,
 				comment: 'True if user can login, false if user login is temporarily deactivated.'
-			},
-			RsaPublicKey: {
-				type: Sequelize.TEXT,
-				allowNull: true,
-				comment: 'RSA public key of the user. (optional)'
-			},
-			Firstname: {
-				type: Sequelize.STRING,
-				allowNull: true
-			},
-			Lastname: {
-				type: Sequelize.STRING,
-				allowNull: true
-			},
-			Extra: {
-				type: Sequelize.TEXT,
-				allowNull: true
 			}
 		}, {
 			classMethods: {
@@ -91,31 +71,27 @@ module.exports = {
 			instanceMethods: {
 				permissions: async function () {
 					const userId = this.get('Id');
-					const userOrganizations = await this.sequelize.model('UserOrganization').findAll({
+					const userOrigins = await this.sequelize.model('UserOrigin').findAll({
 						where: {UserId: userId}
 					});
 					let permissions = {};
-					for (let userOrganization of userOrganizations) {
-						let orgId = userOrganization.get('OrganizationId');
-						let org = await this.sequelize.model('Organization').findById(orgId);
-						if (!org) continue;
+					for (let userOrigin of userOrigins) {
+						let hostname = userOrigin.get('OriginHostname');
 						// eslint-disable-next-line no-await-in-loop
-						permissions[org.get('Hostname')] = await userOrganization.permissions([]);
+						permissions[hostname] = await userOrigin.permissions([]);
 					}
 					return permissions;
 				},
 				roles: async function () {
 					const userId = this.get('Id');
-					const userOrganizations = await this.sequelize.model('UserOrganization').findAll({
+					const userOrigins = await this.sequelize.model('UserOrigin').findAll({
 						where: {UserId: userId}
 					});
 					let roles = {};
-					for (let userOrganization of userOrganizations) {
-						let orgId = userOrganization.get('OrganizationId');
-						let organization = await this.sequelize.model('Organization').findById(orgId);
-						if (!organization) continue;
-						let userRoles = await userOrganization.roles();
-						roles[organization.get('Hostname')] = userRoles;
+					for (let userOrigin of userOrigins) {
+						let hostname = userOrigin.get('OriginHostname');
+						let userRoles = await userOrigin.roles();
+						roles[hostname] = userRoles;
 					}
 					return roles;
 				}

@@ -18,15 +18,15 @@ class AuthRenewSessionRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/", Router.checkSessionToken(rsaPublicKey));
-		router.post("/", Router.requiresAuthentication());
+		router.post("/", this.checkSessionToken(rsaPublicKey));
+		router.post("/", this.requiresAuthentication());
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			try {
 				const session = await this.api.renewSession(req.sessionId);
 				return res.status(200).send(session);
 			} catch (err) {
 				if (err.name === 'CargoModelError') {
-					res.set('X-Cargo-Error', err.code);
+					res.append(this.errorHeader, err.code);
 					switch (err.code) {
 						case 'ERR_SESSION_ID_INVALID':
 						case 'ERR_SESSION_ID_MISSING':

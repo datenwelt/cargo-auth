@@ -1,4 +1,5 @@
 const express = require('express');
+const URI = require('urijs');
 const VError = require('verror');
 
 const Router = require('@datenwelt/cargo-api').Router;
@@ -14,6 +15,7 @@ class AuthRegisterRouter extends Router {
 	async init(config, state) {
 		await super.init(config, state);
 		if (!this.api) throw new VError('AuthAPI not initialized.');
+		if (config.server && config.server.errorHeader) this.errorHeader = config.server.errorHeader;
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
@@ -26,12 +28,14 @@ class AuthRegisterRouter extends Router {
 				delete req.body.password;
 				options.email = req.body.email;
 				delete req.body.email;
+				options.origin = req.body.origin;
+				delete req.body.origin;
 				options.extra = req.body;
 				let activation = await this.api.registerUser(username, options);
 				return res.status(200).send(activation);
 			} catch (err) {
 				if (err.name === 'CargoModelError') {
-					res.set('X-Cargo-Error', err.code);
+					res.set(this.errorHeader, err.code);
 					switch (err.code) {
 						case 'ERR_USERNAME_INVALID':
 						case 'ERR_USERNAME_MISSING':

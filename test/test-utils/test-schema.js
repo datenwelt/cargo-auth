@@ -1,7 +1,9 @@
-/* eslint-disable no-process-env,no-console */
+/* eslint-disable no-process-env,no-console,no-sync */
 const Schema = require('../../src/schema');
 const mysql = require('mysql2/promise');
 const URI = require('urijs');
+
+const fs = require('fs');
 
 const TestConfig = require('./test-config');
 
@@ -34,7 +36,7 @@ class TestSchema {
 
 	static async get(options) {
 		options = options || {};
-		if (!options.force && schema !== null && db !== null) {
+		if (!options.force && schema !== null) {
 			return schema;
 		}
 		try {
@@ -50,6 +52,18 @@ class TestSchema {
 			schema = false;
 		}
 		return schema;
+	}
+
+	static async reset() {
+		if (!db) return false;
+		const sql = fs.readFileSync('test/data/sql/server-tests.sql', 'utf8');
+		await db.query(sql);
+		return true;
+	}
+
+	static async close() {
+		if (db) await db.end();
+		db=null;
 	}
 
 }

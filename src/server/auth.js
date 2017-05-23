@@ -30,7 +30,6 @@ class AuthRouter extends Router {
 			throw new VError(err, 'Unable to initialize new instance of AuthAPI');
 		}
 
-
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
 		const activateRouter = await new AuthActivateRouter(this.serverName, this.api).init(config, state);

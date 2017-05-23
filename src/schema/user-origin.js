@@ -3,24 +3,17 @@ const Sequelize = require('sequelize');
 
 module.exports = {
 	define: function (schema) {
-		return schema.define('UserOrganization', {
+		return schema.define('UserOrigin', {
 			Id: {
-				type: Sequelize.INTEGER,
-				primaryKey: true,
-				autoIncrement: true
-			},
-			UserId: {
-				type: Sequelize.INTEGER,
-				unique: 'Unique_UserIdOrganizationId'
-			},
-			OrganizationId: {
-				type: Sequelize.INTEGER,
-				unique: 'Unique_UserIdOrganizationId'
+				type: Sequelize.STRING,
+				primaryKey: true
 			}
 		}, {
 			instanceMethods: {
 				permissions: async function (permissions) {
-					const userGroups = await this.getGroups();
+					const userGroups = await this.sequelize.model('UserGroup').findAll({
+						where: { UserOriginId: this.get('Id')},
+						order: [['Prio', 'ASC']]});
 					for (let userGroup of userGroups) {
 						let groupId = userGroup.get('GroupId');
 						let group = this.sequelize.model('Group').build({Id: groupId});
@@ -28,7 +21,7 @@ module.exports = {
 						permissions = await group.permissions(permissions);
 					}
 					const userRoles = await this.sequelize.model('UserRole').findAll({
-						where: {UserOrganizationId: this.get('Id')},
+						where: {UserOriginId: this.get('Id')},
 						order: [['Prio', 'ASC']]
 					});
 					for (let userRole of userRoles) {
@@ -38,7 +31,7 @@ module.exports = {
 						permissions = await role.permissions(permissions);
 					}
 					const userPermissions = await this.sequelize.model('UserPermission').findAll({
-						where: {UserOrganizationId: this.get('Id')}, order: [['Prio', 'ASC']]
+						where: {UserOriginId: this.get('Id')}, order: [['Prio', 'ASC']]
 					});
 					const PermissionModel = await this.sequelize.model('Permission');
 					for (let userPermission of userPermissions) {

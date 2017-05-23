@@ -28,7 +28,7 @@
     "superagent": "^3.5.2"
   },
   "dependencies": {
-    "@datenwelt/cargo-api": "^0.2.3",
+    "@datenwelt/cargo-api": "datenwelt/cargo-api",
     "bluebird": "^3.5.0",
     "body-parser": "^1.17.1",
     "bunyan": "^1.8.10",

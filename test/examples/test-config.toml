@@ -15,6 +15,7 @@
     access_log = "/tmp/access.log"
     error_log = "/tmp/error.log"
     fail_without_routes = true
+    errorHeader = "X-Cargo-Error"
 
 [server.routes.0]
     path = "/auth"

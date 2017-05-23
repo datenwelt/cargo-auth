@@ -26,7 +26,6 @@ describe("server/auth/login.js", function () {
 	let api = null;
 	let app = null;
 	let config = null;
-	let db = null;
 	let schema = null;
 	let rsa = null;
 
@@ -36,6 +35,7 @@ describe("server/auth/login.js", function () {
 		db = await TestSchema.db();
 		app = await TestServer.start();
 		schema = await TestSchema.get();
+		await TestSchema.reset();
 		api = new AuthAPI('io.carghub.authd.auth');
 		await api.init(config);
 
@@ -46,50 +46,13 @@ describe("server/auth/login.js", function () {
 		const appRouter = await router.init(config, state);
 		app.use(path, appRouter);
 		app.uri.path(path);
-
-		const sql = `
-		DELETE FROM Permissions;
-			INSERT INTO Permissions VALUES('Administrator', NULL);
-			INSERT INTO Permissions VALUES('ListOrgCustomers', NULL);
-			INSERT INTO Permissions VALUES('ListOwnCustomers', NULL);
-			DELETE FROM Organizations;
-			INSERT INTO Organizations (id, name, hostname) VALUES(1, 'GLOBAL', 'GLOBAL');
-			INSERT INTO Organizations (id, hostname, name) VALUES(2, 'testorg', 'Test Org Inc.');
-			DELETE FROM Roles;
-			INSERT INTO Roles (id, name) VALUES(1, 'TestRole');
-			INSERT INTO Roles (id, name) VALUES(2, 'TestRole2');
-			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('denied', 10, 1, 'Administrator');
-			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('denied', 20, 1, 'ListOrgCustomers');
-			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('allowed', 30, 1, 'ListOwnCustomers');
-			INSERT INTO RolePermissions (mode, prio, roleId, permissionName) VALUES('allowed', 10, 2, 'Administrator');
-			DELETE FROM Groups;
-			INSERT INTO Groups (Id, Name, OrganizationId) VALUES(1, 'TestGroup', 2);
-			INSERT INTO GroupRoles (Prio, GroupId, RoleId) VALUES(10, 1, 2);
-			INSERT INTO GroupPermissions (Mode, Prio, GroupId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
-			DELETE FROM Sessions;
-			DELETE FROM Users;
-			DELETE FROM UserOrganizations;
-			DELETE FROM UserPermissions;
-			DELETE FROM UserRoles;
-			DELETE FROM UserGroups;
-			INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(1, 'testman', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 1);
-			INSERT INTO UserOrganizations (Id, UserId, OrganizationId) VALUES (1, 1, 2);
-			INSERT INTO UserGroups (Prio, GroupId, UserOrganizationId) VALUES(10, 1, 1);
-			INSERT INTO UserRoles (Prio, UserOrganizationId, RoleId) VALUES(10, 1, 2);
-			INSERT INTO UserPermissions (Mode, Prio, UserOrganizationId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
-			INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(2, 'testman-inactive', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 0);
-		`;
-		if (db) {
-			await db.query(sql);
-		}
 	});
 
-	after(function () {
-
+	after(async function () {
+		await TestSchema.close();
 	});
 
 	describe("POST /auth/login", function () {
-
 
 		it("performs a login with valid credentials", async function () {
 			// eslint-disable-next-line no-invalid-this
@@ -118,8 +81,8 @@ describe("server/auth/login.js", function () {
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
 			assert.property(session, 'permissions');
-			assert.property(session.permissions, 'testorg');
-			assert.deepEqual(session.permissions.testorg, ['Administrator', 'ListOrgCustomers']);
+			assert.property(session.permissions, 'localhost');
+			assert.deepEqual(session.permissions.localhost, ['InviteUsers', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
@@ -131,7 +94,7 @@ describe("server/auth/login.js", function () {
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {'testorg': 6}});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {"localhost": 24, "test.cargohub.io": 0}});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "io.carghub.authd.auth.login");

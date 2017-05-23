@@ -14,8 +14,8 @@ module.exports = {
 				allowNull: false,
 				comment: 'Human readable name of the group.'
 			},
-			OrganizationId: {
-				type: Sequelize.INTEGER,
+			OriginHostname: {
+				type: Sequelize.STRING,
 				allowNull: false
 			}
 		}, {

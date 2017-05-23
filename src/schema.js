@@ -1,23 +1,6 @@
+/* eslint-disable global-require */
 const Sequelize = require('sequelize');
-const VError = require('verror');
 
-const Group = require('./schema/group');
-const GroupPermission = require('./schema/group-permission');
-const GroupRole = require('./schema/group-role');
-const Organization = require('./schema/organization');
-const PasswordReset = require('./schema/password-reset');
-const Permission = require('./schema/permission');
-const PermissionBitmap = require('./schema/permission-bitmap');
-const Role = require('./schema/role');
-const RolePermission = require('./schema/role-permission');
-const Session = require('./schema/session');
-const User = require('./schema/user');
-const UserActivation = require('./schema/user-activation');
-const UserGroup = require('./schema/user-group');
-const UserRole = require('./schema/user-role');
-const UserOrganization = require('./schema/user-organization');
-// const UserOrganizationRole = require('./schema/user-organization-roles');
-const UserPermission = require('./schema/user-permission');
 
 class Schema {
 
@@ -59,48 +42,42 @@ class Schema {
 
 	defineStructure() {
 		const sequelize = this.sequelize;
-		const Organizations = Organization.define(sequelize);
-		const Roles = Role.define(sequelize);
-		const Groups = Group.define(sequelize);
-		const PasswordResets = PasswordReset.define(sequelize);
-		const Permissions = Permission.define(sequelize);
-		// eslint-disable-next-line no-unused-vars
-		const PermissionBitmaps = PermissionBitmap.define(sequelize);
-		const GroupPermissions = GroupPermission.define(sequelize);
-		const GroupRoles = GroupRole.define(sequelize);
-		const RolePermissions = RolePermission.define(sequelize);
-		const Users = User.define(sequelize);
-		// eslint-disable-next-line no-unused-vars
-		const UserActivations = UserActivation.define(sequelize);
-		const UserGroups = UserGroup.define(sequelize);
-		const UserRoles = UserRole.define(sequelize);
-		const UserPermissions = UserPermission.define(sequelize);
-		const UserOrganizations = UserOrganization.define(sequelize);
-		// const UserOrganizationRoles = UserOrganizationRole.define(sequelize);
-		// eslint-disable-next-line no-unused-vars
-		const Sessions = Session.define(sequelize);
 
-		Organizations.hasMany(Groups);
-		Organizations.hasMany(Users);
-		// Organizations.hasMany(Roles);
+		require('./schema/group').define(sequelize);
+		require('./schema/group-permission').define(sequelize);
+		require('./schema/group-role').define(sequelize);
+		require('./schema/origin').define(sequelize);
+		require('./schema/password-reset').define(sequelize);
+		require('./schema/permission').define(sequelize);
+		require('./schema/permission-bitmap').define(sequelize);
+		require('./schema/role').define(sequelize);
+		require('./schema/role-permission').define(sequelize);
+		require('./schema/session').define(sequelize);
+		require('./schema/user').define(sequelize);
+		require('./schema/user-activation').define(sequelize);
+		require('./schema/user-group').define(sequelize);
+		require('./schema/user-role').define(sequelize);
+		require('./schema/user-origin').define(sequelize);
+		require('./schema/user-permission').define(sequelize);
 
-		// Roles.belongsTo(Organizations);
-		Roles.belongsToMany(Permissions, {through: RolePermissions});
+		const model = sequelize.model.bind(sequelize);
 
-		Groups.belongsTo(Organizations);
-		Groups.belongsToMany(Permissions, {through: GroupPermissions});
-		Groups.belongsToMany(Roles, {through: GroupRoles});
-		Groups.belongsToMany(Users, {through: UserGroups});
+		model('Origin').hasMany(model('Group'));
 
-		Users.hasMany(PasswordResets);
-		Users.belongsToMany(Organizations, {through: UserOrganizations});
-		UserOrganizations.belongsToMany(Groups, {through: UserGroups, foreignKey: 'UserOrganizationId'});
-		UserOrganizations.belongsToMany(Roles, {through: UserRoles, foreignKey: 'UserOrganizationId'});
-		UserOrganizations.belongsToMany(Permissions, {through: UserPermissions, foreignKey: 'UserOrganizationId'});
+		model('Role').belongsToMany(model('Permission'), {through: model('RolePermission')});
 
+		model('Group').belongsToMany(model('Permission'), {through: model('GroupPermission')});
+		model('Group').belongsToMany(model('Role'), {through: model('GroupRole')});
+
+		model('User').hasMany(model('PasswordReset'));
+		model('User').belongsToMany(model('Origin'), {through: model('UserOrigin')});
+		model('UserOrigin').belongsToMany(model('Group'), {through: model('UserGroup')});
+		model('UserOrigin').belongsToMany(model('Role'), {through: model('UserRole'), foreignKey: 'UserOriginId'});
+		model('UserOrigin').belongsToMany(model('Permission'), {through: model('UserPermission'), foreignKey: 'UserOriginId'});
 	}
 
-	defineData() {}
+	defineData() {
+	}
 
 	get() {
 		return this.sequelize;

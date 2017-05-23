@@ -204,6 +204,7 @@ class AuthAPI extends BaseAPI {
 			Email: email,
 			Active: true
 		});
+
 		await activation.destroy();
 		const payload = API.serialize(user.get());
 		delete payload.password;
