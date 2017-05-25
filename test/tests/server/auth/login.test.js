@@ -1,6 +1,7 @@
 const describe = require("mocha").describe;
 const it = require("mocha").it;
 const after = require("mocha").after;
+const afterEach = require("mocha").afterEach;
 const before = require("mocha").before;
 const assert = require("chai").assert;
 
@@ -9,8 +10,6 @@ const jwt = require('jsonwebtoken');
 const Promise = require('bluebird');
 
 const RSA = require('@datenwelt/cargo-api').RSA;
-
-const AuthAPI = require('../../../../src/api/auth');
 
 const TestServer = require('../../../test-utils/test-server');
 const TestSchema = require('../../../test-utils/test-schema');
@@ -23,28 +22,28 @@ describe("server/auth/login.js", function () {
 
 	let path = "/login";
 
-	let api = null;
 	let app = null;
 	let config = null;
 	let schema = null;
 	let rsa = null;
+	let router = null;
 
 	before(async function () {
 		config = await TestConfig.get();
 		rsa = await RSA.init(config.rsa);
-		db = await TestSchema.db();
 		app = await TestServer.start();
 		schema = await TestSchema.get();
 		await TestSchema.reset();
-		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config);
 
-		const router = new AuthLoginRouter('io.cargohub.auth', api);
-		const state = {
-			schemas: {cargo_auth: schema}
-		};
-		const appRouter = await router.init(config, state);
+		router = new AuthLoginRouter('io.cargohub.auth', { rsa: rsa, schema: schema});
+		const appRouter = await router.init(config);
 		app.use(path, appRouter);
+		// eslint-disable-next-line max-params
+		app.use(function (err, req, res, next) {
+			// Suppress errors on console.
+			if (res.headersSent) return next(err);
+			return res.send();
+		});
 		app.uri.path(path);
 	});
 
@@ -53,6 +52,10 @@ describe("server/auth/login.js", function () {
 	});
 
 	describe("POST /auth/login", function () {
+
+		afterEach(function() {
+			router.removeAllListeners();
+		});
 
 		it("performs a login with valid credentials", async function () {
 			// eslint-disable-next-line no-invalid-this
@@ -63,7 +66,7 @@ describe("server/auth/login.js", function () {
 					clearTimeout(eventTimeout);
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
-				api.onAny(function (event, session) {
+				router.onAny(function (event, session) {
 					clearTimeout(eventTimeout);
 					resolve({event: event, session: session});
 				});
@@ -97,11 +100,11 @@ describe("server/auth/login.js", function () {
 			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {"localhost": 24, "test.cargohub.io": 0}});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
-			assert.equal(eventData.event, "io.carghub.authd.auth.login");
+			assert.equal(eventData.event, "login");
 			assert.deepEqual(eventData.session, session);
 		});
 
-		it('responds with status 400 when ERR_USERNAME_MISSING', async function () {
+		it('responds with status 400 when ERR_BODY_USERNAME_MISSING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -112,13 +115,13 @@ describe("server/auth/login.js", function () {
 				assert.property(err, 'response');
 				const response = err.response;
 				assert.equal(response.status, 400);
-				assert.equal(response.header['x-cargo-error'], 'ERR_USERNAME_MISSING');
+				assert.equal(response.header['x-error'], 'ERR_BODY_USERNAME_MISSING');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');
 		});
 
-		it('responds with status 400 when ERR_USERNAME_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_USERNAME_INVALID', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -129,13 +132,13 @@ describe("server/auth/login.js", function () {
 				assert.property(err, 'response');
 				const response = err.response;
 				assert.equal(response.status, 400);
-				assert.equal(response.header['x-cargo-error'], 'ERR_USERNAME_INVALID');
+				assert.equal(response.header['x-error'], 'ERR_BODY_USERNAME_INVALID');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');
 		});
 
-		it('responds with status 400 when ERR_PASSWORD_MISSING', async function () {
+		it('responds with status 400 when ERR_BODY_PASSWORD_MISSING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -146,13 +149,13 @@ describe("server/auth/login.js", function () {
 				assert.property(err, 'response');
 				const response = err.response;
 				assert.equal(response.status, 400);
-				assert.equal(response.header['x-cargo-error'], 'ERR_PASSWORD_MISSING');
+				assert.equal(response.header['x-error'], 'ERR_BODY_PASSWORD_MISSING');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');
 		});
 
-		it('responds with status 400 when ERR_PASSWORD_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_PASSWORD_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -163,14 +166,14 @@ describe("server/auth/login.js", function () {
 				assert.property(err, 'response');
 				const response = err.response;
 				assert.equal(response.status, 400);
-				assert.equal(response.header['x-cargo-error'], 'ERR_PASSWORD_INVALID');
+				assert.equal(response.header['x-error'], 'ERR_BODY_PASSWORD_NOSTRING');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');
 
 		});
 
-		it('responds with status 400 when ERR_UNKNOWN_USER', async function () {
+		it('responds with status 403 when ERR_REQ_LOGIN_FAILED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -180,15 +183,15 @@ describe("server/auth/login.js", function () {
 			} catch (err) {
 				assert.property(err, 'response');
 				const response = err.response;
-				assert.equal(response.status, 400);
-				assert.equal(response.header['x-cargo-error'], 'ERR_UNKNOWN_USER');
+				assert.equal(response.status, 403);
+				assert.equal(response.header['x-error'], 'ERR_REQ_LOGIN_FAILED');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');
 
 		});
 
-		it('responds with status 403 when ERR_LOGIN_FAILED', async function () {
+		it('responds with status 403 when ERR_REQ_LOGIN_FAILED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -199,14 +202,14 @@ describe("server/auth/login.js", function () {
 				assert.property(err, 'response');
 				const response = err.response;
 				assert.equal(response.status, 403);
-				assert.equal(response.header['x-cargo-error'], 'ERR_LOGIN_FAILED');
+				assert.equal(response.header['x-error'], 'ERR_REQ_LOGIN_FAILED');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');
 
 		});
 
-		it('responds with status 503 when ERR_LOGIN_SUSPENDED', async function () {
+		it('responds with status 423 when ERR_REQ_LOGIN_SUSPENDED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -217,7 +220,7 @@ describe("server/auth/login.js", function () {
 				assert.property(err, 'response');
 				const response = err.response;
 				assert.equal(response.status, 423);
-				assert.equal(response.header['x-cargo-error'], 'ERR_LOGIN_SUSPENDED');
+				assert.equal(response.header['x-error'], 'ERR_REQ_LOGIN_SUSPENDED');
 				return;
 			}
 			throw new Error('XMLHttpRequest was successful but should have failed.');

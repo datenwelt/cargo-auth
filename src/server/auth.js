@@ -19,6 +19,7 @@ class AuthRouter extends Router {
 
 	async init(config, state) {
 		await super.init(config, state);
+
 		const apiName = this.serverName + ".auth";
 		try {
 			if (state && state.apis && state.apis[this.name]) {

@@ -1,7 +1,8 @@
 const crypto = require('crypto');
 const Sequelize = require('sequelize');
+const VError = require('verror');
 
-const check = require('@datenwelt/cargo-api').Check;
+const Checks = require('@datenwelt/cargo-api').Checks;
 
 module.exports = {
 
@@ -52,13 +53,20 @@ module.exports = {
 						return value;
 					}
 
-					password = check(password).trim('ERR_PASSWORD_INVALID')
-						.not().isBlank('ERR_PASSWORD_MISSING')
-						.minLength(6, 'ERR_PASSWORD_TOO_SHORT')
-						.maxLength(64, 'ERR_PASSWORD_TOO_LONG')
-						.transform(complexity, 'ERR_PASSWORD_TOO_WEAK')
-						.transform(forbidden, 'ERR_PASSWORD_INVALID')
-						.val();
+					password = Checks.type('string', password);
+					password = Checks.notBlank(password);
+					password = Checks.minLength(6, password);
+					password = Checks.maxLength(40, password);
+					try {
+						complexity(password);
+					} catch (err) {
+						throw new VError({ name: 'CargoCheckError'}, 'TOOWEAK');
+					}
+					try {
+						forbidden(password);
+					} catch (err) {
+						throw new VError({name: 'CargoCheckError' }, 'INVALID');
+					}
 					return password;
 				},
 				createPassword: function (plaintext) {

@@ -46,6 +46,7 @@
     "node-rsa": "^0.4.2",
     "nodemailer": "^4.0.1",
     "sequelize": "^3.30.4",
+    "standard-http-error": "^2.0.0",
     "toml": "^2.3.2",
     "underscore": "^1.8.3",
     "urijs": "^1.18.10",

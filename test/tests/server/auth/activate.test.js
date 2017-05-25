@@ -39,7 +39,7 @@ describe("server/auth/activate.js", function () {
 			assert.property(err, 'response');
 			const response = err.response;
 			assert.equal(response.status, code, "Unexpected status code");
-			assert.equal(response.header['x-cargo-error'], error, "Unexpected error header");
+			assert.equal(response.header['x-error'], error, "Unexpected error header");
 			return;
 		}
 		throw new Error('XMLHttpRequest was successful but should have failed.');
@@ -147,10 +147,10 @@ describe("server/auth/activate.js", function () {
 		});
 
 
-		it('responds with status 400 when ERR_TOKEN_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_TOKEN_INVALID', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_TOKEN_INVALID',
+			await expectErrorResponse(400, 'ERR_BODY_TOKEN_INVALID',
 				superagent.post(app.uri.toString())
 					.send({
 						token: {id: 1},
@@ -158,10 +158,20 @@ describe("server/auth/activate.js", function () {
 					}));
 		});
 
-		it('responds with status 400 when ERR_TOKEN_MISSING', async function () {
+		it('responds with status 400 when ERR_BODY_TOKEN_MISSING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_TOKEN_MISSING',
+			await expectErrorResponse(400, 'ERR_BODY_TOKEN_MISSING',
+				superagent.post(app.uri.toString())
+					.send({
+						email: "testman44@testdomain.local"
+					}));
+		});
+
+		it('responds with status 400 when ERR_BODY_TOKEN_EMPTY', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+			await expectErrorResponse(400, 'ERR_BODY_TOKEN_EMPTY',
 				superagent.post(app.uri.toString())
 					.send({
 						token: '',
@@ -169,13 +179,13 @@ describe("server/auth/activate.js", function () {
 					}));
 		});
 
-		it('responds with status 400 when ERR_TOKEN_UNKOWN', async function () {
+		it('responds with status 404 when ERR_TOKEN_UNKOWN', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			await expectErrorResponse(404, 'ERR_TOKEN_UNKOWN',
 				superagent.post(app.uri.toString())
 					.send({
-						token: 'askjdhjahdskjahskjhkjdh',
+						token: '220b173657aeda3d47a7912a226793f6be47dbc8',
 						email: "testman44@testdomain.local"
 					}));
 		});

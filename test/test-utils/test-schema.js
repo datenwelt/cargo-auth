@@ -55,7 +55,7 @@ class TestSchema {
 	}
 
 	static async reset() {
-		if (!db) return false;
+		if (!db) db = await TestSchema.db();
 		const sql = fs.readFileSync('test/data/sql/server-tests.sql', 'utf8');
 		await db.query(sql);
 		return true;

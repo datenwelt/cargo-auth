@@ -53,6 +53,7 @@ class Schema {
 		require('./schema/role').define(sequelize);
 		require('./schema/role-permission').define(sequelize);
 		require('./schema/session').define(sequelize);
+		require('./schema/system').define(sequelize);
 		require('./schema/user').define(sequelize);
 		require('./schema/user-activation').define(sequelize);
 		require('./schema/user-group').define(sequelize);

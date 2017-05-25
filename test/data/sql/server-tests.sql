@@ -8,6 +8,7 @@ DELETE FROM Permissions;
 DELETE FROM RolePermissions;
 DELETE FROM Roles;
 DELETE FROM Sessions;
+DELETE FROM Systems;
 DELETE FROM UserActivations;
 DELETE FROM UserGroups;
 DELETE FROM UserOrigins;

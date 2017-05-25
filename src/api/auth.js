@@ -97,58 +97,6 @@ class AuthAPI extends BaseAPI {
 		return session;
 	}
 
-	async registerUser(username, options) {
-		const schema = this.schema.get();
-		options = Object.assign({expiresIn: '48h'}, options || {});
-		try {
-			username = check(username).trim('ERR_USERNAME_INVALID')
-				.not().isBlank('ERR_USERNAME_MISSING')
-				.minLength(6, 'ERR_USERNAME_TOO_SHORT')
-				.maxLength(255, 'ERR_USERNAME_TOO_LONG')
-				.val();
-			if (typeof options.password === 'string' || options.password) {
-				options.password = schema.model('User').checkPassword(options.password, [username]);
-			}
-			if (typeof options.email === 'string' || options.email) {
-				options.email = check(options.email).trim('ERR_EMAIL_INVALID')
-					.not().isBlank('ERR_EMAIL_MISSING')
-					.matches(/^.+@.+$/)
-					.val();
-			}
-			options.extra = options.extra || {};
-		} catch (err) {
-			if (err.name === 'CargoCheckError')
-				throw this.error(err.message);
-			throw err;
-		}
-
-		if (options.password && !options.password.match(/^\{.+\}.*/))
-			options.password = schema.model('User').createPassword(options.password);
-
-		let user = await schema.model('User').findOne({where: {Username: username}});
-		if (user) throw this.error('ERR_USERNAME_ALREADY_PRESENT');
-
-		let activation = await schema.model('UserActivation').create({
-			Id: schema.model('UserActivation').createId(),
-			Username: username,
-			Password: options.password,
-			Email: options.email,
-			Extra: JSON.stringify(options.extra),
-			ExpiresAt: moment().add(ms(options.expiresIn)).toDate()
-		});
-
-		const payload = API.serialize(activation.get());
-		payload.token = payload.id;
-		delete payload.id;
-		payload.extra = JSON.parse(activation.Extra);
-		delete payload.password;
-		if (options.email && this.mailer) {
-			await this.mailer.sendRegistration(payload);
-			delete payload.token;
-		}
-		this.emit(this.name + ".register", payload);
-		return payload;
-	}
 
 	async activateUser(token, options) {
 		options = options || {};

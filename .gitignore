@@ -247,3 +247,4 @@ Temporary Items
 
 # Logfiles from test server
 test/data/logs/*.log
+!/test/tests/schema/group.test.js

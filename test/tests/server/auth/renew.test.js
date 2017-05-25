@@ -1,6 +1,7 @@
 const describe = require("mocha").describe;
 const it = require("mocha").it;
 const after = require("mocha").after;
+const afterEach = require('mocha').afterEach;
 const before = require("mocha").before;
 const assert = require("chai").assert;
 
@@ -11,25 +12,23 @@ const fs = Promise.promisifyAll(require('fs'));
 
 const RSA = require('@datenwelt/cargo-api').RSA;
 
-const AuthAPI = require('../../../../src/api/auth');
-
 const TestServer = require('../../../test-utils/test-server');
 const TestSchema = require('../../../test-utils/test-schema');
 const TestConfig = require('../../../test-utils/test-config');
 
+const AuthLoginRouter = require('../../../../src/server/auth/login');
 const AuthSessionRouter = require('../../../../src/server/auth/renew');
 
-
-describe("server/auth/renew.js", function () {
+describe.only("server/auth/renew.js", function () {
 
 	let path = "/renew";
 
-	let api = null;
 	let app = null;
 	let config = null;
 	let db = null;
 	let schema = null;
 	let rsa = null;
+	let router = null;
 
 	async function expectErrorResponse(code, error, xhrPromise) {
 		try {
@@ -38,7 +37,7 @@ describe("server/auth/renew.js", function () {
 			assert.property(err, 'response');
 			const response = err.response;
 			assert.equal(response.status, code);
-			assert.equal(response.header['x-cargo-error'], error);
+			assert.equal(response.header['x-error'], error);
 			return;
 		}
 		throw new Error('XMLHttpRequest was successful but should have failed.');
@@ -51,14 +50,8 @@ describe("server/auth/renew.js", function () {
 		app = await TestServer.start();
 		schema = await TestSchema.get();
 
-		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config);
-
-		const router = new AuthSessionRouter('io.cargohub.auth', api);
-		const state = {
-			schemas: {cargo_auth: schema}
-		};
-		const appRouter = await router.init(config, state);
+		router = new AuthSessionRouter('io.cargohub.auth', {schema: schema, rsa: rsa});
+		const appRouter = await router.init(config);
 		app.use(path, appRouter);
 		// eslint-disable-next-line max-params
 		app.use(function (err, req, res, next) {
@@ -80,19 +73,25 @@ describe("server/auth/renew.js", function () {
 
 	describe("POST /auth/renew", function () {
 
-		it("renews a valid session", async function () {
+		afterEach(function () {
+			router.removeAllListeners();
+		});
+
+		it.only("renews a valid session", async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
-			let oldSession = await api.login("testman", "test123456");
+			const loginRouter = new AuthLoginRouter('testrouter', { schema: schema, rsa: rsa});
+			await loginRouter.init(config);
+			let oldSession = await loginRouter.login("testman", "test123456");
 
 			let eventPromise = new Promise(function (resolve, reject) {
 				let eventTimeout = setTimeout(function () {
 					clearTimeout(eventTimeout);
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
-				api.onAny(function (event, session) {
-					if (!event.endsWith('.auth.login')) return;
+				router.onAny(function (event, session) {
+					if (!event.endsWith('login')) return;
 					clearTimeout(eventTimeout);
 					resolve({event: event, session: session});
 				});
@@ -129,7 +128,7 @@ describe("server/auth/renew.js", function () {
 			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {"localhost": 24, "test.cargohub.io": 0}});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
-			assert.equal(eventData.event, "io.carghub.authd.auth.login");
+			assert.equal(eventData.event, "login");
 			assert.deepEqual(eventData.session, session);
 		});
 
