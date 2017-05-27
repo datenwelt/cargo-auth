@@ -89,7 +89,7 @@ class AuthResetPasswordRouter extends Router {
 		const schema = this.schema.get();
 		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (!user) throw new HttpError(400, 'ERR_REQ_USERNAME_UNKNOWN');
-		if (!user.get('Active')) throw new HttpError(423, 'ERR_USERNAME_SUSPENDED');
+		if (!user.get('Active')) throw new HttpError(423, 'ERR_REQ_LOGIN_SUSPENDED');
 		let token = schema.model('PasswordReset').createToken();
 		let expiresAt = moment().add(ms(options.expiresIn));
 		let passwordReset = await user.createPasswordReset({
@@ -113,7 +113,7 @@ class AuthResetPasswordRouter extends Router {
 			Checks.type('string', token);
 			Checks.notBlank(token);
 		} catch (err) {
-			if ( err.name === 'CargoCheckError' ) throw new HttpError(440, 'ERR_REQ_TOKEN_' + err.message);
+			if ( err.name === 'CargoCheckError' ) throw new HttpError(400, 'ERR_REQ_TOKEN_' + err.message);
 			else throw new VError(err, 'Unable to check password reset token');
 		}
 		let passwordReset = await schema.model('PasswordReset').findById(token);
@@ -133,7 +133,7 @@ class AuthResetPasswordRouter extends Router {
 		await user.save();
 		passwordReset.destroy();
 		let payload = {username: username};
-		this.emit(this.name + '.password-reset', payload);
+		this.emit('password-reset', payload);
 		return payload;
 	}
 

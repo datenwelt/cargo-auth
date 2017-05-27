@@ -56,11 +56,7 @@ describe("server/auth/register.js", function () {
 		const appRouter = await router.init(config);
 		app.use(path, appRouter);
 		// eslint-disable-next-line max-params
-		app.use(function (err, req, res, next) {
-			// Suppress errors on console.
-			if (res.headersSent) return next(err);
-			return res.send();
-		});
+		app.use(TestServer.createErrorHandler());
 		app.uri.path(path);
 
 		if (db) {

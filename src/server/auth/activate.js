@@ -39,9 +39,9 @@ class AuthActivateRouter extends Router {
 		router.post("/", Router.checkBodyField('password', {
 			optional: true,
 			type: 'string',
-			notBlank: true,
-			minLength: 6,
-			maxLength: 40
+			check: function (value) {
+				this.schema.get().model('User').checkPassword(value);
+			}.bind(this)
 		}));
 		router.post("/", Router.checkBodyField('email', {
 			optional: true,
@@ -106,7 +106,6 @@ class AuthActivateRouter extends Router {
 		if (!password) throw new HttpError(400, 'ERR_REQ_PASSWORD_MISSING');
 		if (!email) throw new HttpError(400, 'ERR_REQ_EMAIL_MISSING');
 		let user = await schema.model('User').findOne({where: {Username: username}});
-		schema.model('User').checkPassword(password, [username]);
 		if (user) throw new HttpError(409, 'ERR_REQ_USERNAME_DUPLICATE');
 		user = await schema.model('User').create({
 			Username: username,

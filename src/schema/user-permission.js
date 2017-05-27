@@ -9,7 +9,8 @@ module.exports = {
 				primaryKey: true
 			},
 			PermissionName: {
-				type: Sequelize.STRING
+				type: Sequelize.STRING,
+				primaryKey: true
 			},
 			Mode: {
 				type: Sequelize.ENUM('allowed', 'denied'),

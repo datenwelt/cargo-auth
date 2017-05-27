@@ -1,7 +1,9 @@
 const Sequelize = require('sequelize');
 const VError = require('verror');
 
-module.exports = {
+const Checks = require('@datenwelt/cargo-api').Checks;
+
+const Permission = {
 	define: function (schema) {
 		return schema.define('Permission', {
 			Name: {
@@ -16,6 +18,7 @@ module.exports = {
 			}
 		}, {
 			classMethods: {
+				checkName: Permission.checkName,
 				applyPermissions: function (modifier, permissions) {
 					permissions = permissions || [];
 					const mode = modifier.get("Mode");
@@ -26,7 +29,7 @@ module.exports = {
 								permissions.splice(permissions.length, 0, permission);
 							break;
 						case 'denied':
-							if ( permissions.includes(permission) )
+							if (permissions.includes(permission))
 								permissions.splice(permissions.indexOf(permissions), 1);
 							break;
 						default:
@@ -34,7 +37,36 @@ module.exports = {
 					}
 					return permissions.sort();
 				}
+			},
+			hooks: {
+				afterUpdate: async function() {
+					await this.sequelize.model('PermissionBitmap').createLatest();
+				},
+				afterDestroy: async function() {
+					await this.sequelize.model('PermissionBitmap').createLatest();
+				},
+				afterCreate: async function() {
+					await this.sequelize.model('PermissionBitmap').createLatest();
+				},
+				afterSave: async function() {
+					await this.sequelize.model('PermissionBitmap').createLatest();
+				},
+				afterUpsert: async function() {
+					await this.sequelize.model('PermissionBitmap').createLatest();
+				}
 			}
+
 		});
+	},
+	checkName: function (value) {
+		Checks.optional(false);
+		value = Checks.type('string', value).trim();
+		value = Checks.notBlank(value);
+		value = Checks.minLength(3, value);
+		value = Checks.maxLength(255, value);
+		value = Checks.match(/^[a-zA-Z0-9_.]+$/, value);
+		return value;
 	}
 };
+
+module.exports = Permission;

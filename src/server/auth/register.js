@@ -49,9 +49,7 @@ class AuthRegisterRouter extends Router {
 		router.post("/", Router.checkBodyField('password', {
 			optional: true,
 			type: 'string',
-			notBlank: true,
-			minLength: 6,
-			maxLength: 40
+			check: this.schema.get().model('User').checkPassword
 		}));
 		router.post("/", Router.checkBodyField('email', {
 			optional: true,

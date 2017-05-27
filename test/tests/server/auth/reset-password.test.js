@@ -12,8 +12,6 @@ const Promise = require('bluebird');
 const fs = Promise.promisifyAll(require('fs'));
 const superagent = require('superagent');
 
-const AuthAPI = require('../../../../src/api/auth');
-
 const TestServer = require('../../../test-utils/test-server');
 const TestSchema = require('../../../test-utils/test-schema');
 const TestConfig = require('../../../test-utils/test-config');
@@ -26,12 +24,12 @@ describe("server/auth/reset-password.js", function () {
 
 	let path = "/reset-password";
 
-	let api = null;
 	let app = null;
 	let config = null;
 	let db = null;
 	let schema = null;
 	let smtp = null;
+	let router = null;
 
 	async function expectErrorResponse(code, error, xhrPromise) {
 		try {
@@ -40,7 +38,7 @@ describe("server/auth/reset-password.js", function () {
 			assert.property(err, 'response');
 			const response = err.response;
 			assert.equal(response.status, code, "Unexpected status code");
-			assert.equal(response.header['x-cargo-error'], error, "Unexpected error header");
+			assert.equal(response.header['x-error'], error, "Unexpected error header");
 			return;
 		}
 		throw new Error('XMLHttpRequest was successful but should have failed.');
@@ -53,19 +51,11 @@ describe("server/auth/reset-password.js", function () {
 		schema = await TestSchema.get();
 		smtp = await TestSmtp.get();
 
-		api = new AuthAPI('io.carghub.authd.auth');
-		await api.init(config, {schema: schema});
-
-		const router = new AuthRouter('io.cargohub.auth', api);
-		const state = {schema: schema};
-		const appRouter = await router.init(config, state);
+		router = new AuthRouter('io.cargohub.auth', {schema: schema});
+		const appRouter = await router.init(config);
 		app.use(path, appRouter);
 		// eslint-disable-next-line max-params
-		app.use(function (err, req, res, next) {
-			// Suppress errors on console.
-			if (res.headersSent) return next(err);
-			return res.send();
-		});
+		app.use(TestServer.createErrorHandler());
 		app.uri.path(path);
 
 		if (db) {
@@ -106,34 +96,34 @@ describe("server/auth/reset-password.js", function () {
 		});
 
 
-		it('responds with status 400 when ERR_USERNAME_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_USERNAME_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_USERNAME_INVALID',
+			await expectErrorResponse(400, 'ERR_BODY_USERNAME_NOSTRING',
 				superagent.post(app.uri.toString())
 					.send({username: {id: 1}}));
 		});
 
-		it('responds with status 400 when ERR_USERNAME_MISSING', async function () {
+		it('responds with status 400 when ERR_BODY_USERNAME_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_USERNAME_MISSING',
+			await expectErrorResponse(400, 'ERR_BODY_USERNAME_EMPTY',
 				superagent.post(app.uri.toString())
 					.send({username: ''}));
 		});
 
-		it('responds with status 400 when ERR_USERNAME_UNKNOWN', async function () {
+		it('responds with status 400 when ERR_REQ_USERNAME_UNKNOWN', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_USERNAME_UNKNOWN',
+			await expectErrorResponse(400, 'ERR_REQ_USERNAME_UNKNOWN',
 				superagent.post(app.uri.toString())
 					.send({username: 'testman54666'}));
 		});
 
-		it('responds with status 423 when ERR_USERNAME_SUSPENDED', async function () {
+		it('responds with status 423 when ERR_REQ_LOGIN_SUSPENDED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(423, 'ERR_USERNAME_SUSPENDED',
+			await expectErrorResponse(423, 'ERR_REQ_LOGIN_SUSPENDED',
 				superagent.post(app.uri.toString())
 					.send({username: 'testman-inactive'}));
 		});
@@ -147,7 +137,7 @@ describe("server/auth/reset-password.js", function () {
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM PasswordResets');
-			let passwordReset = await api.createPasswordReset('testman');
+			let passwordReset = await router.createPasswordReset('testman');
 			UserModel = schema.get().model('User');
 			token = passwordReset.token;
 			sinon.spy(UserModel, 'checkPassword');
@@ -166,8 +156,8 @@ describe("server/auth/reset-password.js", function () {
 					clearTimeout(eventTimeout);
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
-				api.onAny(function (event, data) {
-					if (!event.endsWith('.password-reset')) return;
+				router.onAny(function (event, data) {
+					if (!event.endsWith('password-reset')) return;
 					clearTimeout(eventTimeout);
 					resolve({event: event, data: data});
 				});
@@ -192,23 +182,23 @@ describe("server/auth/reset-password.js", function () {
 
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
-			assert.equal(eventData.event, "io.carghub.authd.auth.password-reset");
+			assert.equal(eventData.event, "password-reset");
 			assert.deepEqual(eventData.data, {username: 'testman'});
 
 		});
 
-		it('responds with status 400 when ERR_TOKEN_MISSING', async function () {
+		it('responds with status 400 when ERR_REQ_TOKEN_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_TOKEN_MISSING',
+			await expectErrorResponse(400, 'ERR_REQ_TOKEN_EMPTY',
 				superagent.post(app.uri.toString() + "/%20")
 					.send({password: 'test.123456'}));
 		});
 
-		it('responds with status 404 when ERR_TOKEN_UNKNOWN', async function () {
+		it('responds with status 404 when ERR_REQ_TOKEN_UNKNOWN', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(404, 'ERR_TOKEN_UNKNOWN',
+			await expectErrorResponse(404, 'ERR_REQ_TOKEN_UNKNOWN',
 				superagent.post(app.uri.toString() + "/xxxxxx")
 					.send({password: 'test.123456'}));
 		});

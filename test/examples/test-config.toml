@@ -21,6 +21,12 @@
     path = "/auth"
     module = "src/server/auth.js"
 
+[server.routes.1]
+    name = "assets"
+    path = "/assets"
+    module = "src/server/assets.js"
+
+
 [rsa]
     privateKey = "test/data/rsa/privkey.encrypted.pem"
     passphrase = "test123456"

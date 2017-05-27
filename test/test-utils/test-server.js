@@ -26,6 +26,14 @@ module.exports = {
 			app.use(bodyParser.json());
 		});
 
+	},
+
+	createErrorHandler: function () {
+		// eslint-disable-next-line no-unused-vars,max-params
+		return function (err, req, res, next) {
+			if (err.name === 'HttpError') res.status(err.code).set('X-Error', err.message);
+			if (!res.headersSent) res.end();
+		};
 	}
 
 };

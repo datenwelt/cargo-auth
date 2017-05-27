@@ -19,7 +19,7 @@ const TestConfig = require('../../../test-utils/test-config');
 const AuthLoginRouter = require('../../../../src/server/auth/login');
 const AuthSessionRouter = require('../../../../src/server/auth/renew');
 
-describe.only("server/auth/renew.js", function () {
+describe("server/auth/renew.js", function () {
 
 	let path = "/renew";
 
@@ -54,11 +54,7 @@ describe.only("server/auth/renew.js", function () {
 		const appRouter = await router.init(config);
 		app.use(path, appRouter);
 		// eslint-disable-next-line max-params
-		app.use(function (err, req, res, next) {
-			// Suppress errors on console.
-			if (res.headersSent) return next(err);
-			return res.send();
-		});
+		app.use(TestServer.createErrorHandler());
 		app.uri.path(path);
 
 		if (db) {
@@ -77,7 +73,7 @@ describe.only("server/auth/renew.js", function () {
 			router.removeAllListeners();
 		});
 
-		it.only("renews a valid session", async function () {
+		it("renews a valid session", async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
@@ -161,7 +157,7 @@ describe.only("server/auth/renew.js", function () {
 		it('responds with status 401/ERR_INVALID_AUTHORIZATION_TOKEN, ERR_UNAUTHENTICATED_ACCESS when token is invalid', function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			return expectErrorResponse(403, 'ERR_INVALID_AUTHORIZATION_TOKEN, ERR_UNAUTHENTICATED_ACCESS',
+			return expectErrorResponse(403, 'ERR_INVALID_AUTHORIZATION_TOKEN',
 				superagent.post(app.uri.toString())
 					.set('Authorization', 'Bearer asdasdasdasd')
 					.send({}));
