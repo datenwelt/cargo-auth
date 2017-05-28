@@ -36,7 +36,7 @@ class TestSchema {
 
 	static async get(options) {
 		options = options || {};
-		if (!options.force && schema !== null) {
+		if (!options.force && schema !== null && schema.get()) {
 			return schema;
 		}
 		try {

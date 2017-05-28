@@ -1,83 +1,72 @@
-/* eslint-disable max-lines */
-const describe = require("mocha").describe;
-const it = require("mocha").it;
-const after = require("mocha").after;
-const afterEach = require("mocha").afterEach;
-const before = require("mocha").before;
-const beforeEach = require("mocha").beforeEach;
-const assert = require("chai").assert;
-const sinon = require("sinon");
+const mocha = require('mocha');
+const describe = mocha.describe;
+const after = mocha.after;
+const afterEach = mocha.afterEach;
+const before = mocha.before;
+const beforeEach = mocha.beforeEach;
+const it = mocha.it;
+
+const assert = require('chai').assert;
+const sinon = require('sinon');
 
 const moment = require('moment');
-const Promise = require('bluebird');
-const fs = Promise.promisifyAll(require('fs'));
+const path = require('path');
 const superagent = require('superagent');
+const util = require('util');
+const Promise = require('bluebird');
 
-const TestServer = require('../../../test-utils/test-server');
-const TestSchema = require('../../../test-utils/test-schema');
-const TestConfig = require('../../../test-utils/test-config');
-const TestSmtp = require('../../../test-utils/test-smtpout');
+const URI = require('urijs');
 
-const AuthRegistrationRouter = require('../../../../src/server/auth/register');
+const CWD = process.cwd();
+const TestConfig = require(path.join(CWD, 'test/test-utils/test-config'));
+const TestSchema = require(path.join(CWD, 'test/test-utils/test-schema'));
+const TestServer = require(path.join(CWD, 'test/test-utils/test-server'));
+const TestSmtp = require(path.join(CWD, 'test/test-utils/test-smtpout'));
 
+const UserModel = require(path.join(CWD, 'src/schema/user'));
+const TestRouter = require(path.join(CWD, 'src/server/auth/register'));
 
-describe("server/auth/register.js", function () {
+describe('server/auth/register.js', function () {
 
-	let path = "/register";
+	const path = '/register';
 
 	let app = null;
 	let config = null;
 	let db = null;
 	let router = null;
 	let schema = null;
+	let server = null;
 	let smtp = null;
+	let state = {};
 
-	async function expectErrorResponse(code, error, xhrPromise) {
-		try {
-			await xhrPromise;
-		} catch (err) {
-			assert.property(err, 'response');
-			const response = err.response;
-			assert.equal(response.status, code, "Unexpected status code");
-			assert.equal(response.header['x-error'], error, "Unexpected error header");
-			return;
-		}
-		throw new Error('XMLHttpRequest was successful but should have failed.');
-	}
+	let baseURI = null;
 
 	before(async function () {
 		config = await TestConfig.get();
 		db = await TestSchema.db();
-		app = await TestServer.start();
 		schema = await TestSchema.get();
 		smtp = await TestSmtp.get();
-
-		router = new AuthRegistrationRouter('io.cargohub.auth', {schema: schema});
-		const appRouter = await router.init(config);
-		app.use(path, appRouter);
-		// eslint-disable-next-line max-params
-		app.use(TestServer.createErrorHandler());
-		app.uri.path(path);
-
-		if (db) {
-			const sql = await fs.readFileAsync('test/data/sql/server-tests.sql', 'utf8');
-			await db.query(sql);
-		}
+		await TestSchema.reset();
+		server = await TestServer.start();
+		router = new TestRouter('io.cargohub.authd', {schema: schema});
+		app = await router.init(config, state);
+		server.use(path, app);
+		server.use(TestServer.createErrorHandler());
+		baseURI = new URI(server.uri);
+		baseURI.path(path);
+		baseURI = baseURI.toString();
 	});
 
-	after(async function () {
-		if (smtp)
-			await TestSmtp.close();
-		smtp = null;
+	after(function (done) {
+		TestSmtp.close().then(function () {
+			server.server.close(done);
+		});
 	});
 
-	describe("POST /auth/register", function () {
-
-		let UserModel = null;
+	describe('POST /auth/register', function () {
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM UserActivations');
-			UserModel = schema.get().model('User');
 			sinon.spy(UserModel, 'checkPassword');
 		});
 
@@ -104,10 +93,16 @@ describe("server/auth/register.js", function () {
 
 			let mailPromise = smtp.waitForMessage();
 
-			let resp = await superagent.post(app.uri.toString()).send({
-				username: "testman44@testdomain.local",
-				email: "testman44@testdomain.local"
-			});
+			let resp = null;
+			try {
+				resp = await superagent.post(baseURI).send({
+					username: "testman44@testdomain.local",
+					email: "testman44@testdomain.local"
+				});
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
 			let activation = resp.body;
 			assert.isDefined(activation);
 			assert.isUndefined(activation.token);
@@ -149,9 +144,15 @@ describe("server/auth/register.js", function () {
 				});
 			});
 
-			let resp = await superagent.post(app.uri.toString()).send({
-				username: "testman44@testdomain.local"
-			});
+			let resp = null;
+			try {
+				resp = await superagent.post(baseURI).send({
+					username: "testman44@testdomain.local"
+				});
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
 			let activation = resp.body;
 			assert.isDefined(activation);
 			assert.isDefined(activation.token);
@@ -174,7 +175,7 @@ describe("server/auth/register.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
-			await superagent.post(app.uri.toString()).send({
+			await superagent.post(baseURI).send({
 				username: "testman44@testdomain.local",
 				password: "test1234567."
 			});
@@ -182,27 +183,27 @@ describe("server/auth/register.js", function () {
 
 		});
 
-		it('responds with status 400 when ERR_BODY_USERNAME_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_USERNAME_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_USERNAME_INVALID',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_NOSTRING',
+				superagent.post(baseURI)
 					.send({username: {id: 1}, password: 'test123456'}));
 		});
 
 		it('responds with status 400 when ERR_BODY_USERNAME_MISSING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_USERNAME_MISSING',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_MISSING',
+				superagent.post(baseURI)
 					.send({password: 'test123456'}));
 		});
 
 		it('responds with status 400 when ERR_BODY_PASSWORD_TOOWEAK', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOWEAK',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOWEAK',
+				superagent.post(baseURI)
 					.send({username: 'test1', password: 'test123456'}));
 		});
 
@@ -210,40 +211,40 @@ describe("server/auth/register.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			let username = Buffer.alloc(256, 'a', 'utf8').toString('utf8');
-			await expectErrorResponse(400, 'ERR_BODY_USERNAME_TOOLONG',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_TOOLONG',
+				superagent.post(baseURI)
 					.send({username: username, password: 'test123456'}));
 		});
 
 		it('responds with status 400 when ERR_BODY_PASSWORD_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_NOSTRING',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_NOSTRING',
+				superagent.post(baseURI)
 					.send({password: {id: 1}, username: 'test123456'}));
 		});
 
-		it('responds with status 400+ERR_BODY_PASSWORD_INVALID if username === password', async function () {
+		it('responds with status 400+ERR_BODY_PASSWORD_FORBIDDEN if username === password', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_INVALID',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_FORBIDDEN',
+				superagent.post(baseURI)
 					.send({password: 'test.123456', username: 'test.123456'}));
 		});
 
 		it('responds with status 400 when ERR_BODY_PASSWORD_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_EMPTY',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_EMPTY',
+				superagent.post(baseURI)
 					.send({username: 'test123456', password: ''}));
 		});
 
 		it('responds with status 400 when ERR_BODY_PASSWORD_TOOSHORT', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOSHORT',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOSHORT',
+				superagent.post(baseURI)
 					.send({password: 'test1', username: 'test123456'}));
 		});
 
@@ -251,42 +252,44 @@ describe("server/auth/register.js", function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			let password = Buffer.alloc(65, 'a', 'utf8').toString('utf8');
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOLONG',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOLONG',
+				superagent.post(baseURI)
 					.send({password: password, username: 'test123456'}));
 		});
 
 		it('responds with status 400 when ERR_BODY_PASSWORD_TOOWEAK', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOWEAK',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_TOOWEAK',
+				superagent.post(baseURI)
 					.send({password: 'testmann', username: 'test123456'}));
 		});
 
-		it('responds with status 400 when ERR_BODY_EMAIL_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_EMAIL_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_EMAIL_INVALID',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_EMAIL_NOSTRING',
+				superagent.post(baseURI)
 					.send({email: {}, password: 'test.123456', username: 'test123456'}));
 		});
 
 		it('responds with status 400 when ERR_BODY_EMAIL_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_EMAIL_EMPTY',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_EMAIL_EMPTY',
+				superagent.post(baseURI)
 					.send({username: 'test123456', password: 'test.123456', email: ''}));
 		});
 
 		it('responds with status 409 when ERR_REQ_USERNAME_DUPLICATE', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(409, 'ERR_REQ_USERNAME_DUPLICATE',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(409, 'ERR_REQ_USERNAME_DUPLICATE',
+				superagent.post(baseURI)
 					.send({username: 'testman', password: 'test.123456'}));
 		});
+
+
 	});
 
 });

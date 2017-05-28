@@ -4,9 +4,9 @@ const VError = require('verror');
 
 const Checks = require('@datenwelt/cargo-api').Checks;
 
-module.exports = {
+class UserModel {
 
-	define: function (schema) {
+	static define(schema) {
 		return schema.define('User', {
 			Id: {
 				type: Sequelize.INTEGER,
@@ -35,40 +35,6 @@ module.exports = {
 			}
 		}, {
 			classMethods: {
-				checkPassword: function (password, blacklist) {
-					blacklist = blacklist || [];
-
-					function complexity(value) {
-						let score = 0;
-						if (value.match(/[a-z]/)) score++;
-						if (value.match(/[A-Z]/)) score++;
-						if (value.match(/[0-9]/)) score++;
-						if (value.match(/[^0-9a-zA-Z]/)) score++;
-						if (score < 3) throw new Error();
-						return value;
-					}
-
-					function forbidden(value) {
-						if (blacklist.includes(value)) throw new Error();
-						return value;
-					}
-
-					password = Checks.type('string', password);
-					password = Checks.notBlank(password);
-					password = Checks.minLength(6, password);
-					password = Checks.maxLength(40, password);
-					try {
-						complexity(password);
-					} catch (err) {
-						throw new VError({ name: 'CargoCheckError'}, 'TOOWEAK');
-					}
-					try {
-						forbidden(password);
-					} catch (err) {
-						throw new VError({name: 'CargoCheckError' }, 'INVALID');
-					}
-					return password;
-				},
 				createPassword: function (plaintext) {
 					const algo = 'SHA1';
 					let password = "{" + algo + "}";
@@ -106,4 +72,61 @@ module.exports = {
 			}
 		});
 	}
-};
+
+	static checkUsername(value) {
+		value = Checks.type('string', value).trim();
+		value = Checks.notBlank(value);
+		value = Checks.minLength(3, value);
+		value = Checks.maxLength(255, value);
+		return value;
+	}
+
+	static checkPassword(value, blacklist) {
+		blacklist = blacklist || [];
+
+		function complexity(value) {
+			let score = 0;
+			if (value.match(/[a-z]/)) score++;
+			if (value.match(/[A-Z]/)) score++;
+			if (value.match(/[0-9]/)) score++;
+			if (value.match(/[^0-9a-zA-Z]/)) score++;
+			if (score < 3) throw new VError({name: 'Complexity'});
+			return value;
+		}
+
+		function forbidden(value) {
+			if (blacklist.includes(value)) throw new VError({name: 'Forbidden'});
+			return value;
+		}
+
+		value = Checks.type('string', value);
+		value = Checks.notBlank(value);
+		value = Checks.minLength(6, value);
+		value = Checks.maxLength(40, value);
+		try {
+			complexity(value);
+		} catch (err) {
+			if (err.name === 'Complexity')    throw new VError({name: 'CargoCheckError'}, 'TOOWEAK');
+			throw new VError(err);
+		}
+		try {
+			forbidden(value);
+		} catch (err) {
+			if (err.name === 'Forbidden') throw new VError({name: 'CargoCheckError'}, 'FORBIDDEN');
+			throw new VError(err);
+		}
+		return value;
+	}
+
+	static checkEmail(value) {
+		value = Checks.type('string', value).trim();
+		value = Checks.notBlank(value);
+		value = Checks.minLength(3, value);
+		value = Checks.maxLength(255, value);
+		return value;
+	}
+
+}
+
+module.exports = UserModel;
+

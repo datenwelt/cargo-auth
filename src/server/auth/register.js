@@ -8,6 +8,7 @@ const Mailer = require('@datenwelt/cargo-api').Mailer;
 const Router = require('@datenwelt/cargo-api').Router;
 
 const Schema = require('../../schema');
+const UserModel = require('../../schema/user');
 
 class AuthRegisterRouter extends Router {
 
@@ -36,56 +37,30 @@ class AuthRegisterRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/", Router.checkBodyField('username', {
-			optional: false,
-			cast: 'string',
-			transform: function (value) {
-				return value.trim();
-			},
-			notBlank: true,
-			minLength: 3,
-			maxLength: 255,
-		}));
-		router.post("/", Router.checkBodyField('password', {
-			optional: true,
-			type: 'string',
-			check: this.schema.get().model('User').checkPassword
-		}));
-		router.post("/", Router.checkBodyField('email', {
-			optional: true,
-			cast: 'string',
-			transform: function (value) {
-				return value.trim();
-			},
-			notBlank: true,
-			minLength: 3,
-			maxLength: 255
-		}));
+		router.post("/", Router.checkBodyField('username', UserModel.checkUsername));
+		router.post("/", Router.checkBodyField('password', (value, req) => {
+			let username = req.body.username;
+			return UserModel.checkPassword(value, [username]);
+		}, {optional: true}));
+		router.post("/", Router.checkBodyField('email', UserModel.checkEmail, {optional: true}));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			const username = req.body.username;
 			delete req.body.username;
-			try {
-				const options = {};
-				options.password = req.body.password;
-				delete req.body.password;
-				options.email = req.body.email;
-				delete req.body.email;
-				options.origin = req.body.origin;
-				delete req.body.origin;
-				options.extra = req.body;
-				let activation = await this.registerUser(username, options);
-				res.status(200).send(activation);
-				return next();
-			} catch (err) {
-				if (err.name === 'HttpError') res.set('X-Error', err.message).status(err.code);
-				else res.status(500);
-				throw new VError(err, 'Unable to register user "%s"', username);
-			}
+			const options = {};
+			options.password = req.body.password;
+			delete req.body.password;
+			options.email = req.body.email;
+			delete req.body.email;
+			options.origin = req.body.origin;
+			delete req.body.origin;
+			options.extra = req.body;
+			let activation = await this.registerUser(username, options);
+			res.status(200).send(activation);
+			return next();
 		}.bind(this)));
 
 		router.all('/', function (req, res, next) {
-			if (!res.headersSent)
-				res.sendStatus(405);
+			if (!res.headersSent) res.sendStatus(405);
 			next();
 		});
 
@@ -98,12 +73,6 @@ class AuthRegisterRouter extends Router {
 		options.extra = options.extra || {};
 
 		if (options.password && !options.password.match(/^\{.+\}.*/)) {
-			try {
-				schema.model('User').checkPassword(options.password, [username]);
-			} catch (err) {
-				if (err.name === 'CargoCheckError') throw new HttpError(400, 'ERR_BODY_PASSWORD_' + err.message);
-				throw new VError(err, 'Unable to check password complexity');
-			}
 			options.password = schema.model('User').createPassword(options.password);
 		}
 

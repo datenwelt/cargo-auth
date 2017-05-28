@@ -17,19 +17,18 @@ class PermissionsRouter extends Router {
 	}
 
 	async init(config, state) {
+		state = state || {};
+		await super.init(config, state);
 		if (!this.schema && !state.schema) {
 			state.schema = await new Schema().init(config.db);
 		}
-		this.schema = state.schema;
+		this.schema = this.schema || state.schema;
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
 
-		router.post("/", Router.checkBodyField('name', { check: Permission.checkNameInput }));
-		router.post("/", Router.checkBodyField('description', {
-			optional: true,
-			cast: 'string'
-		}));
+		router.post("/", Router.checkBodyField('name', Permission.checkName));
+		router.post("/", Router.checkBodyField('description', Permission.checkDescription));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			let permission = await this.createPermission(req.body.name, req.body.description);
 			res.status(200).send(permission);
@@ -56,8 +55,9 @@ class PermissionsRouter extends Router {
 		return permission;
 	}
 
-	shutdown() {
-		this.schema.close();
+	async shutdown() {
+		await super.shutdown();
+		if (this.schema) this.schema.close();
 	}
 
 }

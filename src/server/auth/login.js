@@ -4,10 +4,18 @@ const express = require('express');
 const HttpError = require('standard-http-error');
 const VError = require('verror');
 
+const Checks = require('@datenwelt/cargo-api').Checks;
 const Router = require('@datenwelt/cargo-api').Router;
 const RSA = require('@datenwelt/cargo-api').RSA;
 
 const Schema = require('../../schema');
+
+function checkLoginField(value) {
+	Checks.optional(false, value);
+	value = Checks.type('string', value).trim();
+	value = Checks.notBlank(value);
+	return value;
+}
 
 class AuthLoginRouter extends Router {
 
@@ -37,34 +45,15 @@ class AuthLoginRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/", Router.checkBodyField('username', {
-			optional: false,
-			cast: 'string',
-			transform: function (value) {
-				return value.trim();
-			},
-			notBlank: true,
-			minLength: 3,
-			maxLength: 255,
-		}));
-		router.post("/", Router.checkBodyField('password', {
-			optional: false,
-			type: 'string',
-			notBlank: true
-		}));
+		router.post("/", Router.checkBodyField('username', checkLoginField));
+		router.post("/", Router.checkBodyField('password', checkLoginField));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			const body = req.body;
 			const username = body.username;
 			const password = body.password;
-			try {
 				const session = await this.login(username, password);
 				res.status(200).send(session);
 				next();
-			} catch (err) {
-				if (err.name === 'HttpError') res.set('X-Error', err.message).status(err.code);
-				else res.status(500);
-				throw new VError(err, 'Unable to create login session for user "%s"', username);
-			}
 		}.bind(this)));
 
 		router.all('/', function (req, res, next) {

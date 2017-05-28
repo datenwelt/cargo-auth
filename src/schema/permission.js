@@ -19,6 +19,7 @@ const Permission = {
 		}, {
 			classMethods: {
 				checkName: Permission.checkName,
+				checkDescription: Permission.checkDescription,
 				applyPermissions: function (modifier, permissions) {
 					permissions = permissions || [];
 					const mode = modifier.get("Mode");
@@ -59,12 +60,17 @@ const Permission = {
 		});
 	},
 	checkName: function (value) {
-		Checks.optional(false);
+		Checks.optional(false, value);
 		value = Checks.type('string', value).trim();
 		value = Checks.notBlank(value);
 		value = Checks.minLength(3, value);
 		value = Checks.maxLength(255, value);
-		value = Checks.match(/^[a-zA-Z0-9_.]+$/, value);
+		value = Checks.match(/^[a-zA-Z0-9_.\-]+$/, value);
+		return value;
+	},
+	checkDescription: function(value) {
+		if ( !Checks.optional(true, value) ) return value;
+		value = Checks.type('string', value).trim();
 		return value;
 	}
 };

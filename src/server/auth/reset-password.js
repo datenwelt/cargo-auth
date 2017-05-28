@@ -8,7 +8,22 @@ const Checks = require('@datenwelt/cargo-api').Checks;
 const Mailer = require('@datenwelt/cargo-api').Mailer;
 const Router = require('@datenwelt/cargo-api').Router;
 
+const UserModel = require('../../schema/user');
 const Schema = require('../../schema');
+
+function checkUsername(value) {
+	Checks.optional(false, value);
+	value = Checks.type('string', value).trim();
+	value = Checks.notBlank(value);
+	return value;
+}
+
+function checkToken(value) {
+	Checks.optional(false, value);
+	value = Checks.type('string', value).trim();
+	value = Checks.notBlank(value);
+	return value;
+}
 
 class AuthResetPasswordRouter extends Router {
 
@@ -38,36 +53,24 @@ class AuthResetPasswordRouter extends Router {
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
 
+		router.post("/:token", Router.checkRequestParameter('token', checkToken));
+		router.post("/:token", Router.checkBodyField('password', (value) => {
+			return UserModel.checkPassword(value, []);
+		}));
 		router.post("/:token", Router.asyncRouter(async function (req, res, next) {
 			const token = req.params.token;
 			const password = req.body.password;
-			try {
-				let body = await this.resetPassword(token, password);
-				res.status(200).send(body);
-				return next();
-			} catch (err) {
-				if (err.name === 'HttpError') res.set('X-Error', err.message).status(err.code);
-				else res.status(500);
-				throw new VError(err, 'Unable to reset password with token "%s"', token);
-			}
+			let payload = await this.resetPassword(token, password);
+			res.status(200).send(payload);
+			return next();
 		}.bind(this)));
 
-		router.post("/", Router.checkBodyField('username', {
-			optional: false,
-			type: 'string',
-			notBlank: true
-		}));
+		router.post("/", Router.checkBodyField('username', checkUsername));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			const username = req.body.username;
-			try {
-				let body = await this.createPasswordReset(username);
-				res.status(200).send(body);
-				return next();
-			} catch (err) {
-				if (err.name === 'HttpError') res.set('X-Error', err.message).status(err.code);
-				else res.status(500);
-				throw new VError(err, 'Unable to initiate password reset for user "%s"', username);
-			}
+			let payload = await this.createPasswordReset(username);
+			res.status(200).send(payload);
+			return next();
 		}.bind(this)));
 
 		router.all('/', function (req, res, next) {
@@ -108,14 +111,6 @@ class AuthResetPasswordRouter extends Router {
 
 	async resetPassword(token, password) {
 		const schema = this.schema.get();
-		try {
-			Checks.optional(false, token);
-			Checks.type('string', token);
-			Checks.notBlank(token);
-		} catch (err) {
-			if ( err.name === 'CargoCheckError' ) throw new HttpError(400, 'ERR_REQ_TOKEN_' + err.message);
-			else throw new VError(err, 'Unable to check password reset token');
-		}
 		let passwordReset = await schema.model('PasswordReset').findById(token);
 		if (!passwordReset) throw new HttpError(404, 'ERR_REQ_TOKEN_UNKNOWN');
 		let expiresAt = moment(passwordReset.get('ExpiresAt'));
@@ -123,9 +118,9 @@ class AuthResetPasswordRouter extends Router {
 		let user = await schema.model('User').findById(passwordReset.get('UserId'));
 		let username = user.get('Username');
 		try {
-			schema.model('User').checkPassword(password, [username]);
+			UserModel.checkPassword(password, [username]);
 		} catch (err) {
-			if ( err.name === 'CargoCheckError' ) throw new HttpError(400, 'ERR_BODY_PASSWORD_' + err.message);
+			if (err.name === 'CargoCheckError') throw new HttpError(400, 'ERR_BODY_PASSWORD_' + err.message);
 			else throw new VError(err, 'Unable to check password in password reset');
 		}
 		password = schema.model('User').createPassword(password);

@@ -6,6 +6,9 @@ const VError = require('verror');
 const Router = require('@datenwelt/cargo-api').Router;
 const Schema = require('../../schema');
 
+const UserActivationModel = require('../../schema/user-activation');
+const UserModel = require('../../schema/user');
+
 class AuthActivateRouter extends Router {
 
 	constructor(serverName, options) {
@@ -27,50 +30,21 @@ class AuthActivateRouter extends Router {
 
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
-		router.post("/", Router.checkBodyField('token', {
-			cast: 'string',
-			transform: function (value) {
-				return value.trim();
-			},
-			notBlank: true,
-			minLength: 40,
-			maxLength: 40
-		}));
-		router.post("/", Router.checkBodyField('password', {
-			optional: true,
-			type: 'string',
-			check: function (value) {
-				this.schema.get().model('User').checkPassword(value);
-			}.bind(this)
-		}));
-		router.post("/", Router.checkBodyField('email', {
-			optional: true,
-			cast: 'string',
-			transform: function (value) {
-				return value.trim();
-			},
-			notBlank: true,
-			minLength: 3,
-			maxLength: 255
-		}));
+		router.post("/", Router.checkBodyField('token', UserActivationModel.checkToken));
+		router.post("/", Router.checkBodyField('password', (value) => UserModel.checkPassword(value, []), {optional: true}));
+		router.post("/", Router.checkBodyField('email', UserModel.checkEmail, {optional: true}));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			const token = req.body.token;
 			delete req.body.token;
-			try {
-				const options = {};
-				options.password = req.body.password;
-				delete req.body.password;
-				options.email = req.body.email;
-				delete req.body.email;
-				options.extra = req.body;
-				let user = await this.activateUser(token, options);
-				res.status(200).send(user);
-				return next();
-			} catch (err) {
-				if (err.name === 'HttpError') res.set('X-Error', err.message).status(err.code);
-				else res.status(500);
-				throw new VError(err, 'Unable to activate user by token "%s"', token);
-			}
+			const options = {};
+			options.password = req.body.password;
+			delete req.body.password;
+			options.email = req.body.email;
+			delete req.body.email;
+			options.extra = req.body;
+			let user = await this.activateUser(token, options);
+			res.status(200).send(user);
+			return next();
 		}.bind(this)));
 
 		router.all('/', function (req, res, next) {

@@ -39,34 +39,9 @@ class AuthRenewSessionRouter extends Router {
 		const router = express.Router();
 		router.post("/", Router.requireSessionToken(this.rsa.rsaPublicKey));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
-			try {
 				const session = await this.renewSession(req.sessionId);
-				return res.status(200).send(session);
-			} catch (err) {
-				if (err.name === 'CargoModelError') {
-					res.append('X-Error', err.code);
-					switch (err.code) {
-						case 'ERR_SESSION_ID_INVALID':
-						case 'ERR_SESSION_ID_MISSING':
-							return res.sendStatus(400);
-						case 'ERR_SESSION_EXPIRED':
-							return res.sendStatus(410);
-						case 'ERR_LOGIN_SUSPENDED':
-							return res.sendStatus(423);
-						case 'ERR_UNKNOWN_USER':
-						case 'ERR_UNKNOWN_SESSION':
-							return res.sendStatus(403);
-						default:
-							return res.sendStatus(500);
-					}
-				} else {
-					res.sendStatus(500);
-					throw new VError(err, 'Unable to renew session "%s"', req.sessionId);
-				}
-			} finally {
-				// eslint-disable-next-line callback-return
+				res.status(200).send(session);
 				next();
-			}
 		}.bind(this)));
 
 		router.all('/', function (req, res, next) {
@@ -82,15 +57,6 @@ class AuthRenewSessionRouter extends Router {
 		options = Object.assign({
 			validFor: '4h'
 		}, options || {});
-		try {
-			Checks.optional(false, sessionId);
-			Checks.type('string', sessionId);
-			Checks.notBlank(sessionId);
-		} catch (err) {
-			if (err.name === 'CargoCheckError')
-				throw new HttpError(400, 'ERR_REQ_SESSION_' + err.message);
-			throw err;
-		}
 		const schema = this.schema.get();
 		const rsaPrivateKey = this.rsa.rsaPrivateKey;
 
@@ -103,9 +69,7 @@ class AuthRenewSessionRouter extends Router {
 		let username = session.get('Username');
 		let user = await schema.model('User').findOne({where: {Username: username}});
 		if (!user) throw new HttpError(403, 'ERR_REQ_USER_UNKNOWN');
-		if (!user.get('Active')) {
-			throw new HttpError(423, 'ERR_REQ_LOGIN_SUSPENDED');
-		}
+		if (!user.get('Active')) throw new HttpError(423, 'ERR_REQ_LOGIN_SUSPENDED');
 		session = await schema.model('Session').createForUser(user, rsaPrivateKey, options);
 		this.emit('login', session);
 		return session;

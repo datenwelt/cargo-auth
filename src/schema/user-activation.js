@@ -3,8 +3,10 @@ const crypto = require('crypto');
 const moment = require('moment');
 const Sequelize = require('sequelize');
 
-module.exports = {
-	define: function (schema) {
+const Checks = require('@datenwelt/cargo-api').Checks;
+
+class UserActivationModel {
+	static define(schema) {
 		return schema.define('UserActivation', {
 			Id: {
 				type: Sequelize.STRING(40),
@@ -41,4 +43,16 @@ module.exports = {
 			}
 		});
 	}
-};
+
+	static checkToken(value){
+		value = Checks.type('string', value).trim();
+		value = Checks.notBlank(value);
+		value = Checks.minLength(40, value);
+		value = Checks.maxLength(40, value);
+		return value;
+	}
+
+}
+
+module.exports = UserActivationModel;
+

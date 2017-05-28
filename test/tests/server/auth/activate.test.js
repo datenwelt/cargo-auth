@@ -1,99 +1,88 @@
-const describe = require("mocha").describe;
-const it = require("mocha").it;
-const after = require("mocha").after;
-const afterEach = require("mocha").afterEach;
-const before = require("mocha").before;
-const beforeEach = require("mocha").beforeEach;
-const assert = require("chai").assert;
+const mocha = require('mocha');
+const assert = require('chai').assert;
 const sinon = require('sinon');
+const describe = mocha.describe;
+const after = mocha.after;
+const afterEach = mocha.afterEach;
+const before = mocha.before;
+const beforeEach = mocha.beforeEach;
+const it = mocha.it;
 
-const Promise = require('bluebird');
-const fs = Promise.promisifyAll(require('fs'));
+const path = require('path');
 const superagent = require('superagent');
+const util = require('util');
+const Promise = require('bluebird');
 
-const TestServer = require('../../../test-utils/test-server');
-const TestSchema = require('../../../test-utils/test-schema');
-const TestConfig = require('../../../test-utils/test-config');
-const TestSmtp = require('../../../test-utils/test-smtpout');
+const URI = require('urijs');
 
+const CWD = process.cwd();
+const TestConfig = require(path.join(CWD, 'test/test-utils/test-config'));
+const TestSchema = require(path.join(CWD, 'test/test-utils/test-schema'));
+const TestServer = require(path.join(CWD, 'test/test-utils/test-server'));
+const TestSmtp = require(path.join(CWD, 'test/test-utils/test-smtpout'));
 
-const AuthRegistrationRouter = require('../../../../src/server/auth/register');
-const AuthActivateRouter = require('../../../../src/server/auth/activate');
+const UserModel = require(path.join(CWD, 'src/schema/user'));
+const TestRouter = require(path.join(CWD, 'src/server/auth/activate'));
 
+const Register = require(path.join(CWD, 'src/server/auth/register'));
 
-describe("server/auth/activate.js", function () {
+describe('server/auth/activate.js', function () {
 
-	let path = "/activate";
+	const path = '/activate';
 
 	let app = null;
 	let config = null;
 	let db = null;
+	let router = null;
 	let schema = null;
-	let smtp = null;
-	let regRouter = null;
-	let actRouter = null;
+	let server = null;
+	let state = {};
+	let token = null;
 
-	async function expectErrorResponse(code, error, xhrPromise) {
-		try {
-			await xhrPromise;
-		} catch (err) {
-			assert.property(err, 'response');
-			const response = err.response;
-			assert.equal(response.status, code, "Unexpected status code");
-			assert.equal(response.header['x-error'], error, "Unexpected error header");
-			return;
-		}
-		throw new Error('XMLHttpRequest was successful but should have failed.');
-	}
+	let register = null;
+
+	let baseURI = null;
 
 	before(async function () {
 		config = await TestConfig.get();
 		db = await TestSchema.db();
-		app = await TestServer.start();
 		schema = await TestSchema.get();
-		smtp = await TestSmtp.get();
+		await TestSmtp.get();
+		await TestSchema.reset();
+		server = await TestServer.start();
+		router = new TestRouter('io.cargohub.authd', {schema: schema});
+		app = await router.init(config, state);
+		server.use(path, app);
+		server.use(TestServer.createErrorHandler());
+		baseURI = new URI(server.uri);
+		baseURI.path(path);
+		baseURI = baseURI.toString();
 
-
-		regRouter = new AuthRegistrationRouter('io.cargohub.auth', {schema: schema});
-		await regRouter.init(config);
-		actRouter = new AuthActivateRouter('io.cargohub.auth', {schema: schema});
-		const appRouter = await actRouter.init(config);
-		app.use(path, appRouter);
-		// eslint-disable-next-line max-params
-		app.use(TestServer.createErrorHandler());
-		app.uri.path(path);
-
-		if (db) {
-			const sql = await fs.readFileAsync('test/data/sql/server-tests.sql', 'utf8');
-			await db.query(sql);
-		}
+		register = new Register('io.cargohub.authd', {schema: schema});
+		await register.init(config, state);
 	});
 
-	after(async function () {
-		if (smtp)
-			await TestSmtp.close();
-		smtp = null;
+	after(function (done) {
+		TestSmtp.close().then(function () {
+			server.server.close(done);
+		});
 	});
 
-	describe("POST /auth/activate", function () {
-
-		let token = null;
-		let UserModel = null;
+	describe('POST /auth/activate', function () {
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM UserActivations');
 			await db.query("DELETE FROM Users WHERE Username='testman44@testdomain.local'");
-			const activation = await regRouter.registerUser('testman44@testdomain.local', {
+			const activation = await register.registerUser('testman44@testdomain.local', {
 				password: 'test.123455'
 			});
 			token = activation.token;
-			UserModel = schema.get().model('User');
 			sinon.spy(UserModel, 'checkPassword');
 		});
 
 		afterEach(function () {
 			UserModel.checkPassword.restore();
-			regRouter.removeAllListeners();
+			router.removeAllListeners();
 		});
 
 		it("activates the user with a valid token", async function () {
@@ -105,17 +94,24 @@ describe("server/auth/activate.js", function () {
 					clearTimeout(eventTimeout);
 					reject(new Error('Timeout waiting on event.'));
 				}, 2000);
-				actRouter.onAny(function (event, data) {
+				router.onAny(function (event, data) {
 					if (!event.endsWith('activate')) return;
 					clearTimeout(eventTimeout);
 					resolve({event: event, data: data});
 				});
 			});
 
-			let resp = await superagent.post(app.uri.toString()).send({
-				token: token,
-				email: "testman44@testdomain.local"
-			});
+			let resp = null;
+
+			try {
+				resp = await superagent.post(baseURI).send({
+					token: token,
+					email: "testman44@testdomain.local"
+				});
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
 			let user = resp.body;
 			assert.isDefined(user);
 			assert.equal(user.username, 'testman44@testdomain.local');
@@ -130,22 +126,27 @@ describe("server/auth/activate.js", function () {
 
 		});
 
-		it.skip("calls UserModel.checkPassword() when a password is provided", async function () {
+		it("calls UserModel.checkPassword() when a password is provided", async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await superagent.post(app.uri.toString()).send({
-				token: token,
-				email: "testman44@testdomain.local",
-				password: "test.1234567"
-			});
-			assert.isTrue(UserModel.checkPassword.calledWith('test.1234567'), "UserModel.checkPassword() has been called.");
+			try {
+				await superagent.post(baseURI).send({
+					token: token,
+					email: "testman44@testdomain.local",
+					password: "test.1234567"
+				});
+				assert.isTrue(UserModel.checkPassword.calledWith('test.1234567'), "UserModel.checkPassword() has been called.");
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
 		});
 
-		it('responds with status 400 when ERR_BODY_TOKEN_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_TOKEN_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_TOKEN_INVALID',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_TOKEN_NOSTRING',
+				superagent.post(baseURI)
 					.send({
 						token: {id: 1},
 						email: "testman44@testdomain.local"
@@ -155,8 +156,8 @@ describe("server/auth/activate.js", function () {
 		it('responds with status 400 when ERR_BODY_TOKEN_MISSING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_TOKEN_MISSING',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_TOKEN_MISSING',
+				superagent.post(baseURI)
 					.send({
 						email: "testman44@testdomain.local"
 					}));
@@ -165,8 +166,8 @@ describe("server/auth/activate.js", function () {
 		it('responds with status 400 when ERR_BODY_TOKEN_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_TOKEN_EMPTY',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_TOKEN_EMPTY',
+				superagent.post(baseURI)
 					.send({
 						token: '',
 						email: "testman44@testdomain.local"
@@ -176,14 +177,13 @@ describe("server/auth/activate.js", function () {
 		it('responds with status 404 when ERR_BODY_TOKEN_UNKOWN', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(404, 'ERR_BODY_TOKEN_UNKOWN',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(404, 'ERR_BODY_TOKEN_UNKOWN',
+				superagent.post(baseURI)
 					.send({
 						token: '220b173657aeda3d47a7912a226793f6be47dbc8',
 						email: "testman44@testdomain.local"
 					}));
 		});
-
 	});
 
 });

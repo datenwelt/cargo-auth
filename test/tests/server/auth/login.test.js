@@ -1,55 +1,73 @@
-const describe = require("mocha").describe;
-const it = require("mocha").it;
-const after = require("mocha").after;
-const afterEach = require("mocha").afterEach;
-const before = require("mocha").before;
-const assert = require("chai").assert;
+const mocha = require('mocha');
+const describe = mocha.describe;
+const after = mocha.after;
+const afterEach = mocha.afterEach;
+const before = mocha.before;
+const beforeEach = mocha.beforeEach;
+const it = mocha.it;
 
-const superagent = require('superagent');
+const assert = require('chai').assert;
+
 const jwt = require('jsonwebtoken');
+const path = require('path');
+const superagent = require('superagent');
+const util = require('util');
 const Promise = require('bluebird');
+const URI = require('urijs');
+
+const CWD = process.cwd();
+const TestConfig = require(path.join(CWD, 'test/test-utils/test-config'));
+const TestSchema = require(path.join(CWD, 'test/test-utils/test-schema'));
+const TestServer = require(path.join(CWD, 'test/test-utils/test-server'));
+const TestSmtp = require(path.join(CWD, 'test/test-utils/test-smtpout'));
 
 const RSA = require('@datenwelt/cargo-api').RSA;
+const TestRouter = require(path.join(CWD, 'src/server/auth/login'));
 
-const TestServer = require('../../../test-utils/test-server');
-const TestSchema = require('../../../test-utils/test-schema');
-const TestConfig = require('../../../test-utils/test-config');
+describe('server/auth/login.js', function () {
 
-const AuthLoginRouter = require('../../../../src/server/auth/login');
-
-
-describe("server/auth/login.js", function () {
-
-	let path = "/login";
+	const path = '/login';
 
 	let app = null;
 	let config = null;
-	let schema = null;
-	let rsa = null;
+	let db = null;
 	let router = null;
+	let schema = null;
+	let server = null;
+	let state = {};
+
+	let baseURI = null;
 
 	before(async function () {
 		config = await TestConfig.get();
-		rsa = await RSA.init(config.rsa);
-		app = await TestServer.start();
+		db = await TestSchema.db();
 		schema = await TestSchema.get();
+		state.rsa = await RSA.init(config.rsa);
+		await TestSmtp.get();
 		await TestSchema.reset();
-
-		router = new AuthLoginRouter('io.cargohub.auth', { rsa: rsa, schema: schema});
-		const appRouter = await router.init(config);
-		app.use(path, appRouter);
-		// eslint-disable-next-line max-params
-		app.use(TestServer.createErrorHandler());
-		app.uri.path(path);
+		server = await TestServer.start();
+		router = new TestRouter('io.cargohub.authd', {schema: schema});
+		app = await router.init(config, state);
+		server.use(path, app);
+		server.use(TestServer.createErrorHandler());
+		baseURI = new URI(server.uri);
+		baseURI.path(path);
+		baseURI = baseURI.toString();
 	});
 
-	after(async function () {
-		await TestSchema.close();
+	after(function (done) {
+		TestSmtp.close().then(function () {
+			server.server.close(done);
+		});
 	});
 
-	describe("POST /auth/login", function () {
+	describe('POST /auth/login', function () {
 
-		afterEach(function() {
+		beforeEach(async function () {
+			db.query('DELETE FROM Sessions');
+		});
+
+		afterEach(function () {
 			router.removeAllListeners();
 		});
 
@@ -68,8 +86,14 @@ describe("server/auth/login.js", function () {
 				});
 			});
 
-			let resp = await superagent.post(app.uri.toString())
-				.send({username: "testman", password: "test123456"});
+			let resp = null;
+			try {
+				resp = await superagent.post(baseURI)
+					.send({username: "testman", password: "test123456"});
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
 			let session = resp.body;
 			assert.isDefined(session);
 			assert.typeOf(session, 'object');
@@ -89,7 +113,7 @@ describe("server/auth/login.js", function () {
 
 			const latestBitmap = await schema.get().model('PermissionBitmap').findLatest();
 			const token = session.token;
-			const publicKey = rsa.exportKey('public');
+			const publicKey = state.rsa.exportKey('public');
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
@@ -103,140 +127,64 @@ describe("server/auth/login.js", function () {
 		it('responds with status 400 when ERR_BODY_USERNAME_MISSING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-
-			try {
-				await superagent.post(app.uri.toString())
-					.send({password: "test123456"});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 400);
-				assert.equal(response.header['x-error'], 'ERR_BODY_USERNAME_MISSING');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_MISSING',
+				superagent.post(baseURI)
+					.send({password: "test123456"}));
 		});
 
-		it('responds with status 400 when ERR_BODY_USERNAME_INVALID', async function () {
+		it('responds with status 400 when ERR_BODY_USERNAME_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-
-			try {
-				await superagent.post(app.uri.toString())
-					.send({username: {test: 1}, password: "test123456"});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 400);
-				assert.equal(response.header['x-error'], 'ERR_BODY_USERNAME_INVALID');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
-		});
-
-		it('responds with status 400 when ERR_BODY_PASSWORD_MISSING', async function () {
-			// eslint-disable-next-line no-invalid-this
-			if (!app) this.skip();
-
-			try {
-				await superagent.post(app.uri.toString())
-					.send({username: 'testman'});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 400);
-				assert.equal(response.header['x-error'], 'ERR_BODY_PASSWORD_MISSING');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_NOSTRING',
+				superagent.post(baseURI)
+					.send({username: {test: 1}, password: "test123456"}));
 		});
 
 		it('responds with status 400 when ERR_BODY_PASSWORD_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_NOSTRING',
+				superagent.post(baseURI)
+					.send({username: 'testman', password: {test: 1}}));
+		});
 
-			try {
-				await superagent.post(app.uri.toString())
-					.send({username: 'testman', password: {test: 1}});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 400);
-				assert.equal(response.header['x-error'], 'ERR_BODY_PASSWORD_NOSTRING');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
-
+		it('responds with status 400 when ERR_BODY_PASSWORD_MISSING', async function () {
+			// eslint-disable-next-line no-invalid-this
+			if (!app) this.skip();
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_PASSWORD_MISSING',
+				superagent.post(baseURI)
+					.send({username: 'testman'}));
 		});
 
 		it('responds with status 403 when ERR_REQ_LOGIN_FAILED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-
-			try {
-				await superagent.post(app.uri.toString())
-					.send({username: 'testman33', password: 'test123456'});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 403);
-				assert.equal(response.header['x-error'], 'ERR_REQ_LOGIN_FAILED');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
-
+			await TestServer.expectErrorResponse(403, 'ERR_REQ_LOGIN_FAILED',
+				superagent.post(baseURI)
+					.send({username: 'testman33', password: 'test123456'}));
 		});
 
 		it('responds with status 403 when ERR_REQ_LOGIN_FAILED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-
-			try {
-				await superagent.post(app.uri.toString())
-					.send({username: 'testman', password: 'xxxx'});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 403);
-				assert.equal(response.header['x-error'], 'ERR_REQ_LOGIN_FAILED');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
-
+			await TestServer.expectErrorResponse(403, 'ERR_REQ_LOGIN_FAILED',
+				superagent.post(baseURI)
+					.send({username: 'testman', password: 'xxxx'}));
 		});
 
 		it('responds with status 423 when ERR_REQ_LOGIN_SUSPENDED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-
-			try {
-				await superagent.post(app.uri.toString())
-					.send({username: 'testman-inactive', password: 'test123456'});
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 423);
-				assert.equal(response.header['x-error'], 'ERR_REQ_LOGIN_SUSPENDED');
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
-
+			await TestServer.expectErrorResponse(423, 'ERR_REQ_LOGIN_SUSPENDED',
+				superagent.post(baseURI)
+					.send({username: 'testman-inactive', password: 'test123456'}));
 		});
 
 		it('responds with status 405 when not using POST', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-
-			try {
-				await superagent.get(app.uri.toString());
-			} catch (err) {
-				assert.property(err, 'response');
-				const response = err.response;
-				assert.equal(response.status, 405);
-				return;
-			}
-			throw new Error('XMLHttpRequest was successful but should have failed.');
-
+			await TestServer.expectErrorResponse(405, undefined,
+				superagent.get(baseURI));
 		});
 	});
 

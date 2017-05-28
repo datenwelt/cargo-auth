@@ -1,76 +1,71 @@
-const describe = require("mocha").describe;
-const it = require("mocha").it;
-const after = require("mocha").after;
-const before = require("mocha").before;
-const beforeEach = require("mocha").beforeEach;
-const afterEach = require("mocha").afterEach;
-const assert = require("chai").assert;
+const mocha = require('mocha');
+const describe = mocha.describe;
+const after = mocha.after;
+const afterEach = mocha.afterEach;
+const before = mocha.before;
+const beforeEach = mocha.beforeEach;
+const it = mocha.it;
 
+const assert = require('chai').assert;
 const sinon = require('sinon');
 
-const Promise = require('bluebird');
-const fs = Promise.promisifyAll(require('fs'));
+const path = require('path');
 const superagent = require('superagent');
+const util = require('util');
+const Promise = require('bluebird');
+const URI = require('urijs');
 
-const TestServer = require('../../../test-utils/test-server');
-const TestSchema = require('../../../test-utils/test-schema');
-const TestConfig = require('../../../test-utils/test-config');
-const TestSmtp = require('../../../test-utils/test-smtpout');
+const CWD = process.cwd();
+const TestConfig = require(path.join(CWD, 'test/test-utils/test-config'));
+const TestSchema = require(path.join(CWD, 'test/test-utils/test-schema'));
+const TestServer = require(path.join(CWD, 'test/test-utils/test-server'));
+const TestSmtp = require(path.join(CWD, 'test/test-utils/test-smtpout'));
 
-const AuthRouter = require('../../../../src/server/auth/reset-password');
+const RSA = require('@datenwelt/cargo-api').RSA;
 
+const UserModel = require(path.join(CWD, 'src/schema/user'));
+const TestRouter = require(path.join(CWD, 'src/server/auth/reset-password'));
 
-describe("server/auth/reset-password.js", function () {
+describe('server/auth/reset-password.js', function () {
 
-	let path = "/reset-password";
+	const path = '/reset-password';
 
 	let app = null;
 	let config = null;
 	let db = null;
-	let schema = null;
-	let smtp = null;
 	let router = null;
+	let schema = null;
+	let server = null;
+	let smtp = null;
+	let state = {};
 
-	async function expectErrorResponse(code, error, xhrPromise) {
-		try {
-			await xhrPromise;
-		} catch (err) {
-			assert.property(err, 'response');
-			const response = err.response;
-			assert.equal(response.status, code, "Unexpected status code");
-			assert.equal(response.header['x-error'], error, "Unexpected error header");
-			return;
-		}
-		throw new Error('XMLHttpRequest was successful but should have failed.');
-	}
+	let baseURI = null;
 
 	before(async function () {
 		config = await TestConfig.get();
 		db = await TestSchema.db();
-		app = await TestServer.start();
 		schema = await TestSchema.get();
+		state.rsa = await RSA.init(config.rsa);
 		smtp = await TestSmtp.get();
-
-		router = new AuthRouter('io.cargohub.auth', {schema: schema});
-		const appRouter = await router.init(config);
-		app.use(path, appRouter);
-		// eslint-disable-next-line max-params
-		app.use(TestServer.createErrorHandler());
-		app.uri.path(path);
-
-		if (db) {
-			const sql = await fs.readFileAsync('test/data/sql/server-tests.sql', 'utf8');
-			await db.query(sql);
-		}
+		await TestSchema.reset();
+		server = await TestServer.start();
+		router = new TestRouter('io.cargohub.authd', {schema: schema});
+		app = await router.init(config, state);
+		server.use(path, app);
+		server.use(TestServer.createErrorHandler());
+		baseURI = new URI(server.uri);
+		baseURI.path(path);
+		baseURI = baseURI.toString();
 	});
 
-	after(async function () {
-		if (smtp)
-			await TestSmtp.close();
-		smtp = null;
+	after(function (done) {
+		TestSmtp.close().then(function () {
+			smtp = null;
+			server.server.close(done);
+		});
 	});
 
-	describe("POST /auth/reset-password", function () {
+	describe('POST /auth/reset-password', function () {
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM PasswordResets');
@@ -82,9 +77,16 @@ describe("server/auth/reset-password.js", function () {
 
 			let mailPromise = smtp.waitForMessage();
 
-			let resp = await superagent.post(app.uri.toString()).send({
-				username: 'testman'
-			});
+			let resp = null;
+			try {
+				resp = await superagent.post(baseURI).send({
+					username: 'testman'
+				});
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
+
 			let passwordReset = resp.body;
 			assert.isDefined(passwordReset);
 
@@ -95,50 +97,48 @@ describe("server/auth/reset-password.js", function () {
 
 		});
 
-
 		it('responds with status 400 when ERR_BODY_USERNAME_NOSTRING', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_USERNAME_NOSTRING',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_NOSTRING',
+				superagent.post(baseURI)
 					.send({username: {id: 1}}));
 		});
 
 		it('responds with status 400 when ERR_BODY_USERNAME_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_BODY_USERNAME_EMPTY',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_BODY_USERNAME_EMPTY',
+				superagent.post(baseURI)
 					.send({username: ''}));
 		});
 
 		it('responds with status 400 when ERR_REQ_USERNAME_UNKNOWN', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_REQ_USERNAME_UNKNOWN',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(400, 'ERR_REQ_USERNAME_UNKNOWN',
+				superagent.post(baseURI)
 					.send({username: 'testman54666'}));
 		});
 
 		it('responds with status 423 when ERR_REQ_LOGIN_SUSPENDED', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(423, 'ERR_REQ_LOGIN_SUSPENDED',
-				superagent.post(app.uri.toString())
+			await TestServer.expectErrorResponse(423, 'ERR_REQ_LOGIN_SUSPENDED',
+				superagent.post(baseURI)
 					.send({username: 'testman-inactive'}));
 		});
+
 
 	});
 
 	describe("POST /auth/reset-password/:token", function () {
 
 		let token = null;
-		let UserModel = null;
 
 		beforeEach(async function () {
 			await db.query('DELETE FROM PasswordResets');
 			let passwordReset = await router.createPasswordReset('testman');
-			UserModel = schema.get().model('User');
 			token = passwordReset.token;
 			sinon.spy(UserModel, 'checkPassword');
 		});
@@ -163,12 +163,18 @@ describe("server/auth/reset-password.js", function () {
 				});
 			});
 
-			let user = await UserModel.findOne({where: {Username: 'testman'}});
+			let user = await schema.get().model('User').findOne({where: {Username: 'testman'}});
 			let oldPassword = user.get('Password');
 			let password = 'test.' + Math.floor(Math.random() * 1000) + 1000;
-			let resp = await superagent.post(app.uri.toString() + "/" + token).send({
-				password: password
-			});
+			let resp = null;
+			try {
+				resp = await superagent.post(baseURI + "/" + token).send({
+					password: password
+				});
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
 
 			let response = resp.body;
 			assert.isDefined(response);
@@ -187,23 +193,22 @@ describe("server/auth/reset-password.js", function () {
 
 		});
 
-		it('responds with status 400 when ERR_REQ_TOKEN_EMPTY', async function () {
+		it('responds with status 400 when ERR_PARAM_TOKEN_EMPTY', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(400, 'ERR_REQ_TOKEN_EMPTY',
-				superagent.post(app.uri.toString() + "/%20")
+			await TestServer.expectErrorResponse(400, 'ERR_PARAM_TOKEN_EMPTY',
+				superagent.post(baseURI + "/%20")
 					.send({password: 'test.123456'}));
 		});
 
 		it('responds with status 404 when ERR_REQ_TOKEN_UNKNOWN', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await expectErrorResponse(404, 'ERR_REQ_TOKEN_UNKNOWN',
-				superagent.post(app.uri.toString() + "/xxxxxx")
+			await TestServer.expectErrorResponse(404, 'ERR_REQ_TOKEN_UNKNOWN',
+				superagent.post(baseURI + "/xxxxxx")
 					.send({password: 'test.123456'}));
 		});
 
 
 	});
-
 });
