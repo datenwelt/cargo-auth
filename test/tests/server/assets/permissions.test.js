@@ -75,7 +75,7 @@ describe('server/assets/permissions.js', function () {
 
 	describe('POST /assets/permissions', function () {
 
-		afterEach(async function() {
+		afterEach(async function () {
 			await (await TestSchema.db()).query("DELETE FROM Permissions WHERE Name='test-permission'");
 		});
 
@@ -148,4 +148,186 @@ describe('server/assets/permissions.js', function () {
 
 	});
 
+	describe('DELETE /assets/permissions/:name', function () {
+
+		beforeEach(async function () {
+			await (await TestSchema.db()).query("INSERT INTO Permissions VALUES('test-permission', NULL)");
+		});
+
+		afterEach(async function () {
+			await (await TestSchema.db()).query("DELETE FROM Permissions WHERE Name LIKE 'test-permission%'");
+		});
+
+		it('loads an existing permission', async function () {
+			let response = null;
+			try {
+				response = await superagent
+					.get(baseURI + "/test-permission")
+					.set('Authorization', 'Bearer ' + token);
+			} catch (err) {
+				if (err.response) {
+					assert.strictEqual(err.response.status, 200, util.format('Request failed with status code %d: %s', err.response.status, err.response.get('X-Error')));
+					return;
+				}
+				throw new VError(err);
+			}
+			assert.deepEqual(response.body, {
+				name: 'test-permission',
+				description: null
+			});
+		});
+
+		it('responds with 403 if the permission does not exist', async function () {
+			await TestServer.expectErrorResponse(404, 'ERR_REQ_PERMISSION_UNKNOWN',
+				superagent.get(baseURI + "/test-permission1")
+					.set('Authorization', 'Bearer ' + token));
+		});
+
+	});
+
+	describe('POST /assets/permissions/:name', function () {
+
+		beforeEach(async function () {
+			await (await TestSchema.db()).query("INSERT INTO Permissions VALUES('test-permission', NULL)");
+		});
+
+		afterEach(async function () {
+			await (await TestSchema.db()).query("DELETE FROM Permissions WHERE Name LIKE 'test-permission%'");
+		});
+
+		it('changes an existing permission', async function () {
+			let response = null;
+			try {
+				response = await superagent
+					.post(baseURI + "/test-permission")
+					.set('Authorization', 'Bearer ' + token)
+					.send({
+						name: 'test-permission1',
+						description: 'Test Permission'
+					});
+			} catch (err) {
+				if (err.response) {
+					assert.strictEqual(err.response.status, 200, util.format('Request failed with status code %d: %s', err.response.status, err.response.get('X-Error')));
+					return;
+				}
+				throw new VError(err);
+			}
+			assert.deepEqual(response.body, {
+				name: 'test-permission1',
+				description: 'Test Permission'
+			});
+
+		});
+
+		it('responds with 409 ERR_REQ_PERMISSION_DUPLICATE when the new permission already exists', async function () {
+			await (await TestSchema.db()).query("INSERT INTO Permissions VALUES('test-permission1', NULL)");
+			await TestServer.expectErrorResponse(409, 'ERR_REQ_PERMISSION_DUPLICATE',
+				superagent.post(baseURI + "/test-permission")
+					.set('Authorization', 'Bearer ' + token)
+					.send({
+						name: 'test-permission1',
+						description: 'Test Permission'
+					}));
+		});
+
+		it('responds with 404 ERR_REQ_PERMISSION_DUPLICATE when the permission does not exist', async function () {
+			await TestServer.expectErrorResponse(404, 'ERR_REQ_PERMISSION_UNKNOWN',
+				superagent.post(baseURI + "/test-permission1")
+					.set('Authorization', 'Bearer ' + token)
+					.send({
+						name: 'test-permission1',
+						description: 'Test Permission'
+					}));
+		});
+
+	});
+
+
+	describe('PUT /assets/permissions/:name', function () {
+
+		beforeEach(async function () {
+			await (await TestSchema.db()).query("INSERT INTO Permissions VALUES('test-permission', NULL)");
+		});
+
+		afterEach(async function () {
+			await (await TestSchema.db()).query("DELETE FROM Permissions WHERE Name LIKE 'test-permission%'");
+		});
+
+		it('changes an existing permission', async function () {
+			let response = null;
+			try {
+				response = await superagent
+					.put(baseURI + "/test-permission")
+					.set('Authorization', 'Bearer ' + token)
+					.send({
+						description: 'Test Permission'
+					});
+			} catch (err) {
+				if (err.response) {
+					assert.strictEqual(err.response.status, 200, util.format('Request failed with status code %d: %s', err.response.status, err.response.get('X-Error')));
+					return;
+				}
+				throw new VError(err);
+			}
+			assert.deepEqual(response.body, {
+				name: 'test-permission',
+				description: 'Test Permission'
+			});
+
+		});
+
+		it('responds with 404 ERR_REQ_PERMISSION_DUPLICATE when the permission does not exist', async function () {
+			await TestServer.expectErrorResponse(404, 'ERR_REQ_PERMISSION_UNKNOWN',
+				superagent.put(baseURI + "/test-permission1")
+					.set('Authorization', 'Bearer ' + token)
+					.send({
+						description: 'Test Permission'
+					}));
+		});
+
+	});
+
+	describe('DELETE /assets/permissions/:name', function () {
+
+		beforeEach(async function () {
+			await (await TestSchema.db()).query("INSERT INTO Permissions VALUES('test-permission', NULL)");
+		});
+
+		afterEach(async function () {
+			await (await TestSchema.db()).query("DELETE FROM Permissions WHERE Name LIKE 'test-permission%'");
+		});
+
+		it('deletes an existing permission', async function () {
+			let response = null;
+			try {
+				response = await superagent
+					.delete(baseURI + "/test-permission")
+					.set('Authorization', 'Bearer ' + token);
+			} catch (err) {
+				if (err.response) {
+					assert.strictEqual(err.response.status, 200, util.format('Request failed with status code %d: %s', err.response.status, err.response.get('X-Error')));
+					return;
+				}
+				throw new VError(err);
+			}
+			assert.deepEqual(response.body, {});
+		});
+
+		it('responds with 200 when the permission does not exist', async function () {
+			let response = null;
+			try {
+				response = await superagent
+					.delete(baseURI + "/test-permission1")
+					.set('Authorization', 'Bearer ' + token);
+			} catch (err) {
+				if (err.response) {
+					assert.strictEqual(err.response.status, 200, util.format('Request failed with status code %d: %s', err.response.status, err.response.get('X-Error')));
+					return;
+				}
+				throw new VError(err);
+			}
+			assert.deepEqual(response.body, {});
+		});
+
+	});
 });

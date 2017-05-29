@@ -3,8 +3,8 @@ const VError = require('verror');
 
 const Checks = require('@datenwelt/cargo-api').Checks;
 
-const Permission = {
-	define: function (schema) {
+class Permission {
+	static define(schema) {
 		return schema.define('Permission', {
 			Name: {
 				type: Sequelize.STRING,
@@ -58,21 +58,23 @@ const Permission = {
 			}
 
 		});
-	},
-	checkName: function (value) {
-		Checks.optional(false, value);
+	}
+
+	static checkName(value) {
 		value = Checks.type('string', value).trim();
 		value = Checks.notBlank(value);
 		value = Checks.minLength(3, value);
 		value = Checks.maxLength(255, value);
+
 		value = Checks.match(/^[a-zA-Z0-9_.\-]+$/, value);
 		return value;
-	},
-	checkDescription: function(value) {
-		if ( !Checks.optional(true, value) ) return value;
+	}
+
+	static checkDescription(value) {
 		value = Checks.type('string', value).trim();
 		return value;
 	}
-};
+
+}
 
 module.exports = Permission;
