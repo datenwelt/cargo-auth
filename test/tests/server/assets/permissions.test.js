@@ -1,3 +1,4 @@
+/* eslint-disable no-unused-vars */
 const mocha = require('mocha');
 const describe = mocha.describe;
 const after = mocha.after;
@@ -16,7 +17,7 @@ const VError = require('verror');
 
 const CWD = process.cwd();
 const TestConfig = require(path.join(CWD, 'test/test-utils/test-config'));
-const TestSchema = require(path.join(CWD, 'test/test-utils/test-schema'))
+const TestSchema = require(path.join(CWD, 'test/test-utils/test-schema'));
 const TestServer = require(path.join(CWD, 'test/test-utils/test-server'));
 
 const Login = require(path.join(CWD, 'src/server/auth/login'));
@@ -74,6 +75,10 @@ describe('server/assets/permissions.js', function () {
 
 	describe('POST /assets/permissions', function () {
 
+		afterEach(async function() {
+			await (await TestSchema.db()).query("DELETE FROM Permissions WHERE Name='test-permission'");
+		});
+
 		it('creates a new permission', async function () {
 			try {
 				let response = await superagent
@@ -96,6 +101,50 @@ describe('server/assets/permissions.js', function () {
 			}
 		});
 
+	});
+
+	describe('GET /assets/permissions', function () {
+
+		it('loads the current permissions as a list', async function () {
+			let resp = null;
+			try {
+				resp = await superagent.get(baseURI + "?offset=0&limit=15");
+			} catch (err) {
+				if (err.response) assert.fail(true, true, util.format('Request failed: %d %s', err.response.status, err.response.get('X-Error')));
+				throw err;
+			}
+			let permissions = resp.body;
+			assert.deepEqual(permissions, [
+				{
+					"Description": null,
+					"Name": "auth-admin"
+				},
+				{
+					"Description": null,
+					"Name": "InviteUsers"
+				},
+				{
+					"Description": null,
+					"Name": "ListOrgCustomers"
+				},
+				{
+					"Description": null,
+					"Name": "ListOwnCustomers"
+				},
+				{
+					"Description": null,
+					"Name": "ManageUsers"
+				},
+				{
+					"Description": null,
+					"Name": "SystemReboot"
+				}
+			]);
+			assert.strictEqual(resp.get('x-list-offset'), "0");
+			assert.strictEqual(resp.get('x-list-limit'), "15");
+			assert.strictEqual(resp.get('x-list-count'), "6");
+			assert.strictEqual(resp.get('x-list-order'), 'name;asc');
+		});
 
 	});
 

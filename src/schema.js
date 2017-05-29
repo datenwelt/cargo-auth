@@ -1,6 +1,8 @@
-/* eslint-disable global-require */
+/* eslint-disable global-require,id-length */
 const Sequelize = require('sequelize');
-
+const _ = require('underscore');
+const changecase = require('change-case');
+const HttpError = require('standard-http-error');
 
 class Schema {
 
@@ -74,14 +76,51 @@ class Schema {
 		model('User').belongsToMany(model('Origin'), {through: model('UserOrigin')});
 		model('UserOrigin').belongsToMany(model('Group'), {through: model('UserGroup')});
 		model('UserOrigin').belongsToMany(model('Role'), {through: model('UserRole'), foreignKey: 'UserOriginId'});
-		model('UserOrigin').belongsToMany(model('Permission'), {through: model('UserPermission'), foreignKey: 'UserOriginId'});
+		model('UserOrigin').belongsToMany(model('Permission'), {
+			through: model('UserPermission'),
+			foreignKey: 'UserOriginId'
+		});
 	}
 
+	// eslint-disable-next-line class-methods-use-this
 	defineData() {
 	}
 
 	get() {
 		return this.sequelize;
+	}
+
+	async createGenericListGenerator(model, defaultListOptions) {
+		let description = await this.sequelize.model(model).describe();
+		let fieldnames = _.chain(description).keys().map((col) => changecase.camelCase(col)).value();
+		defaultListOptions = Object.assign({offset: 0, limit: 10}, defaultListOptions);
+		description = null;
+		return async function (refListOptions) {
+			let listOptions = Object.assign({}, defaultListOptions, refListOptions);
+			let findOptions = {
+				offset: listOptions.offset,
+				limit: listOptions.limit
+			};
+			if (listOptions.orderBy && listOptions.orderBy.length) {
+				if ( _.isString(listOptions.orderBy)) listOptions.orderBy = [listOptions.orderBy];
+				findOptions.order = _.map(listOptions.orderBy, function (orderDef) {
+					let matches = orderDef.match(/^([A-Za-z0-9_]+)(?:,(asc|desc))$/);
+					if ( !matches) throw new HttpError(400, 'ERR_QUERY_ORDER_BY_INVALID');
+					let fieldname = matches[1];
+					let direction = matches[2];
+					if ( !direction ) direction = 'asc';
+					if ( !_.contains(fieldnames, fieldname)) throw new HttpError(400, 'ERR_QUERY_ORDER_BY_UNKNOWNFIELD');
+					return [changecase.pascalCase(fieldname), direction];
+				});
+			}
+			let result = await this.sequelize.model(model).findAll(findOptions);
+			let list = _.map(result, (instance) => instance.get());
+			refListOptions.offset = listOptions.offset;
+			refListOptions.limit = listOptions.limit;
+			refListOptions.orderBy = listOptions.orderBy;
+			refListOptions.orderDirection = listOptions.orderDirection;
+			return list;
+		}.bind(this);
 	}
 
 	close() {

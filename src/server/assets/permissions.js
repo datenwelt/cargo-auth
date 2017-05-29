@@ -1,3 +1,5 @@
+const _ = require('underscore');
+const changecase = require('change-case');
 const express = require('express');
 const HttpError = require('standard-http-error');
 const VError = require('verror');
@@ -35,6 +37,13 @@ class PermissionsRouter extends Router {
 			return next();
 		}.bind(this)));
 
+		const listGenerator = await this.schema.createGenericListGenerator('Permission', {
+			offset: 0,
+			limit: 100,
+			orderBy: 'name,asc'
+		});
+		router.get("/", Router.createGenericListRouter(listGenerator));
+
 		return router;
 	}
 
@@ -53,6 +62,25 @@ class PermissionsRouter extends Router {
 		let permission = Router.serialize(row.get());
 		this.emit('permission.create', permission);
 		return permission;
+	}
+
+	async listPermissions(listOptions) {
+		const schema = this.schema.get();
+		if (!this.fieldNames) {
+			let describe = await schema.model('Permission').describe();
+			this.fieldNames = _.chain(describe).keys().map(function (col) {
+				return changecase.camelCase(col);
+			}).value();
+		}
+		listOptions.orderBy = listOptions.orderBy || 'name';
+		if (!_.contains(this.fieldNames, listOptions.orderBy))
+			throw new HttpError(400, 'ERR_QUERY_ORDER_BY_UNKOWNFIELD');
+		let permissions = await schema.model('Permission').findAll({
+			order: [[listOptions.orderBy, listOptions.orderDirection]],
+			offset: listOptions.offset,
+			limit: listOptions.limit
+		});
+		return _.map(permissions, (instance) => instance.get());
 	}
 
 	async shutdown() {
