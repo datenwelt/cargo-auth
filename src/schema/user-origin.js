@@ -7,6 +7,11 @@ module.exports = {
 			Id: {
 				type: Sequelize.STRING,
 				primaryKey: true
+			},
+			IsDefault: {
+				type: Sequelize.BOOLEAN,
+				defaultValue: false,
+				allowNull: false
 			}
 		}, {
 			instanceMethods: {
@@ -25,8 +30,8 @@ module.exports = {
 						order: [['Prio', 'ASC']]
 					});
 					for (let userRole of userRoles) {
-						let roleId = userRole.get('RoleId');
-						let role = this.sequelize.model('Role').build({Id: roleId});
+						let roleName = userRole.get('RoleName');
+						let role = this.sequelize.model('Role').build({Name: roleName});
 						// eslint-disable-next-line no-await-in-loop
 						permissions = await role.permissions(permissions);
 					}
@@ -51,7 +56,7 @@ module.exports = {
 					}
 					const userRoles = await this.getRoles();
 					for (let userRole of userRoles) {
-						roles.push(userRole.get('Id'));
+						roles.push(userRole.get('Name'));
 					}
 					return roles;
 				}

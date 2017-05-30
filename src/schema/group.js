@@ -28,9 +28,9 @@ module.exports = {
 						order: [['Prio', 'ASC']]
 					});
 					for (let groupRole of groupRoles) {
-						let roleId = groupRole.get('RoleId');
+						let roleName = groupRole.get('RoleName');
 						// eslint-disable-next-line no-await-in-loop
-						let role = await this.sequelize.model('Role').build({Id: roleId});
+						let role = await this.sequelize.model('Role').build({Name: roleName});
 						// eslint-disable-next-line no-await-in-loop
 						permissions = await role.permissions(permissions);
 					}
@@ -50,7 +50,7 @@ module.exports = {
 					});
 					let roles = [];
 					for (let groupRole of groupRoles) {
-						roles.push(groupRole.get('RoleId'));
+						roles.push(groupRole.get('RoleName'));
 					}
 					return roles;
 				}

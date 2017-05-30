@@ -15,7 +15,8 @@ class UserModel {
 			},
 			Username: {
 				type: Sequelize.STRING,
-				unique: true
+				unique: true,
+				allowNull: false
 			},
 			Password: {
 				type: Sequelize.STRING,
@@ -24,7 +25,7 @@ class UserModel {
 			},
 			Email: {
 				type: Sequelize.STRING,
-				allowNull: true,
+				allowNull: false,
 				comment: 'Email address of the user for password recovery.'
 			},
 			Active: {

@@ -1,3 +1,4 @@
+/* eslint-disable new-cap */
 const Sequelize = require('sequelize');
 
 module.exports = {
@@ -7,8 +8,8 @@ module.exports = {
 				type: Sequelize.STRING,
 				allowNull: false
 			},
-			RoleId: {
-				type: Sequelize.INTEGER,
+			RoleName: {
+				type: Sequelize.STRING(25),
 				allowNull: false
 			},
 			Prio: {

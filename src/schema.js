@@ -4,6 +4,8 @@ const _ = require('underscore');
 const changecase = require('change-case');
 const HttpError = require('standard-http-error');
 
+const Router = require('@datenwelt/cargo-api').Router;
+
 class Schema {
 
 	constructor() {
@@ -115,6 +117,7 @@ class Schema {
 			}
 			let result = await this.sequelize.model(model).findAll(findOptions);
 			let list = _.map(result, (instance) => instance.get());
+			list = Router.serialize(list);
 			refListOptions.offset = listOptions.offset;
 			refListOptions.limit = listOptions.limit;
 			refListOptions.orderBy = listOptions.orderBy;
