@@ -4,8 +4,8 @@ const Sequelize = require('sequelize');
 module.exports = {
 	define: function (schema) {
 		return schema.define('UserRole', {
-			UserId: {
-				type: Sequelize.INTEGER,
+			UserUsername: {
+				type: Sequelize.STRING,
 				allowNull: false
 			},
 			RoleName: {

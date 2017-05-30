@@ -9,14 +9,9 @@ class UserModel {
 
 	static define(schema) {
 		return schema.define('User', {
-			Id: {
-				type: Sequelize.INTEGER,
-				primaryKey: true,
-				autoIncrement: true
-			},
 			Username: {
 				type: Sequelize.STRING,
-				unique: true,
+				primaryKey: true,
 				allowNull: false
 			},
 			Password: {
@@ -37,18 +32,17 @@ class UserModel {
 			}
 		}, {
 			classMethods: {
-				createPassword: function (plaintext) {
-					const algo = 'SHA1';
-					let password = "{" + algo + "}";
-					password += crypto.createHash(algo).update(plaintext).digest('hex');
-					return password;
-				}
+				createPassword: UserModel.createPassword,
+				checkUsername: UserModel.checkUsername,
+				checkPassword: UserModel.checkPassword,
+				checkEmail: UserModel.checkEmail,
+				checkActive: UserModel.checkActive,
 			},
 			instanceMethods: {
 				permissions: async function () {
-					const userId = this.get('Id');
+					const username = this.get('Username');
 					let userGroups = await this.sequelize.model('UserGroup').findAll({
-						where: {UserId: userId},
+						where: {UserUsername: username},
 						order: [['Prio', 'ASC']]
 					});
 					let groups = await Promise.map(userGroups, async function (userGroup) {
@@ -60,7 +54,7 @@ class UserModel {
 						return group.permissions(memo);
 					}, []);
 					let userRoles = await this.sequelize.model('UserRole').findAll({
-						where: {UserId: userId},
+						where: {UserUsername: username},
 						order: [['Prio', 'ASC']]
 					});
 					let roles = await Promise.map(userRoles, function (userRole) {
@@ -72,7 +66,7 @@ class UserModel {
 					}, permissions);
 					const permissionModel = this.sequelize.model('Permission');
 					let userPermissions = await this.sequelize.model('UserPermission').findAll({
-						where: {UserId: userId},
+						where: {UserUsername: username},
 						order: [['Prio', 'ASC']]
 					});
 					permissions = await Promise.reduce(userPermissions, function (memo, modifier) {
@@ -81,9 +75,9 @@ class UserModel {
 					return permissions;
 				},
 				roles: async function () {
-					const userId = this.get('Id');
+					const username = this.get('Username');
 					let groups = await Promise.map(this.sequelize.model('UserGroup').findAll({
-						where: {'UserId': userId}, order: [['Prio', 'ASC']]
+						where: {'UserUsername': username}, order: [['Prio', 'ASC']]
 					}), function (userGroup) {
 						return this.sequelize.model('Group').findById(userGroup.get('GroupId'));
 					}.bind(this));
@@ -92,7 +86,7 @@ class UserModel {
 					}, []);
 
 					let p = this.sequelize.model('UserRole').findAll({
-						where: {'UserId': userId}, order: [['Prio', 'ASC']]
+						where: {'UserUsername': username}, order: [['Prio', 'ASC']]
 					});
 					let userRoles = await Promise.map(p, (userRole) => userRole.get('RoleName'));
 					roles = roles.concat(userRoles);
@@ -110,8 +104,9 @@ class UserModel {
 		return value;
 	}
 
-	static checkPassword(value, blacklist) {
-		blacklist = blacklist || [];
+	static checkPassword(value, req) {
+		let blacklist = [];
+		if ( req && req.body && req.body.username ) blacklist.push(req.body.username);
 
 		function complexity(value) {
 			let score = 0;
@@ -130,6 +125,8 @@ class UserModel {
 
 		value = Checks.type('string', value);
 		value = Checks.notBlank(value);
+		if (value.startsWith('{SHA1}')) return value;
+
 		value = Checks.minLength(6, value);
 		value = Checks.maxLength(40, value);
 		try {
@@ -144,7 +141,7 @@ class UserModel {
 			if (err.name === 'Forbidden') throw new VError({name: 'CargoCheckError'}, 'FORBIDDEN');
 			throw new VError(err);
 		}
-		return value;
+		return UserModel.createPassword(value);
 	}
 
 	static checkEmail(value) {
@@ -153,6 +150,17 @@ class UserModel {
 		value = Checks.minLength(3, value);
 		value = Checks.maxLength(255, value);
 		return value;
+	}
+
+	static checkActive(value) {
+		return Checks.cast('boolean', value);
+	}
+
+	static createPassword(plaintext) {
+		const algo = 'SHA1';
+		let password = "{" + algo + "}";
+		password += crypto.createHash(algo).update(plaintext).digest('hex');
+		return password;
 	}
 
 }

@@ -49,12 +49,12 @@ INSERT INTO Groups (Id, Name) VALUES(1, 'Service Admin Group');
 INSERT INTO GroupRoles (Prio, GroupId, RoleName) VALUES(10, 1, 'service');
 INSERT INTO GroupPermissions (Mode, Prio, GroupId, PermissionName) VALUES('allowed', 10, 1, 'SystemReboot');
 
-INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(1, 'testman', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 1);
-INSERT INTO UserGroups (Prio, GroupId, UserId) VALUES(10, 1, 1);
-INSERT INTO UserRoles (Prio, UserId, RoleName) VALUES(10, 1, 'admin');
-INSERT INTO UserPermissions (Mode, Prio, UserId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
+INSERT INTO Users (Username, Password, Email, Active) VALUES('testman', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 1);
+INSERT INTO UserGroups (Prio, GroupId, UserUsername) VALUES(10, 1, 'testman');
+INSERT INTO UserRoles (Prio, UserUsername, RoleName) VALUES(10, 'testman', 'admin');
+INSERT INTO UserPermissions (Mode, Prio, UserUsername, PermissionName) VALUES('allowed', 10, 'testman', 'ListOrgCustomers');
 
-INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(2, 'testman-inactive', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 0);
+INSERT INTO Users (Username, Password, Email, Active) VALUES('testman-inactive', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 0);
 
-INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(3, 'admin', '{SHA1}24b61c4dfdb5b8b5ae50340589be6c97310876c4', 'admin@cargohub.io', 1);
+INSERT INTO Users (Username, Password, Email, Active) VALUES('admin', '{SHA1}24b61c4dfdb5b8b5ae50340589be6c97310876c4', 'admin@cargohub.io', 1);
 

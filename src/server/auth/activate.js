@@ -31,7 +31,7 @@ class AuthActivateRouter extends Router {
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
 		router.post("/", Router.checkBodyField('token', UserActivationModel.checkToken));
-		router.post("/", Router.checkBodyField('password', (value) => UserModel.checkPassword(value, []), {optional: true}));
+		router.post("/", Router.checkBodyField('password', UserModel.checkPassword, {optional: true}));
 		router.post("/", Router.checkBodyField('email', UserModel.checkEmail, {optional: true}));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			const token = req.body.token;
@@ -70,6 +70,10 @@ class AuthActivateRouter extends Router {
 		if (moment().isAfter(expiresAt)) throw new HttpError(410, 'ERR_BODY_TOKEN_EXPIRED');
 
 		const username = activation.get('Username');
+
+		if (options.password && !options.password.match(/^\{.+\}.*/))
+			options.password = schema.model('User').createPassword(options.password);
+
 		const password = options.password || activation.get('Password');
 		const email = options.email || activation.get('Email');
 

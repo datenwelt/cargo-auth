@@ -126,7 +126,7 @@ describe('server/auth/activate.js', function () {
 
 		});
 
-		it("calls UserModel.checkPassword() when a password is provided", async function () {
+		it.skip("calls UserModel.checkPassword() when a password is provided", async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 			try {

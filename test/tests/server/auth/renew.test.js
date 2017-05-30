@@ -69,7 +69,7 @@ describe('server/auth/renew.js', function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
 
-			const loginRouter = new Login('testrouter', { schema: schema, rsa: state.rsa});
+			const loginRouter = new Login('testrouter', {schema: schema, rsa: state.rsa});
 			await loginRouter.init(config);
 			let oldSession = await loginRouter.login("testman", "test123456");
 
@@ -99,7 +99,6 @@ describe('server/auth/renew.js', function () {
 			assert.typeOf(session, 'object');
 			assert.equal(session.username, 'testman');
 			assert.equal(session.expiresIn, '4h');
-			assert.equal(session.userId, 1);
 			assert.property(session, 'id');
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
@@ -108,7 +107,6 @@ describe('server/auth/renew.js', function () {
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
-			assert.strictEqual(session.userId, 1);
 
 			assert.notEqual(session.id, oldSession.id);
 
@@ -117,8 +115,8 @@ describe('server/auth/renew.js', function () {
 			const publicKey = state.rsa.exportKey('public');
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
-			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 24 });
+			assert.deepEqual(payload.usr, 'testman');
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 24});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "login");

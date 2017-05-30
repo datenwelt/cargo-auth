@@ -10,8 +10,8 @@ module.exports = {
 				type: Sequelize.STRING(40),
 				primaryKey: true
 			},
-			UserId: {
-				type: Sequelize.INTEGER,
+			UserUsername: {
+				type: Sequelize.STRING,
 				allowNull: false
 			},
 			ExpiresAt: {

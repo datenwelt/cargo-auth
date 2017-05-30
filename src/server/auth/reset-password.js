@@ -115,7 +115,7 @@ class AuthResetPasswordRouter extends Router {
 		if (!passwordReset) throw new HttpError(404, 'ERR_REQ_TOKEN_UNKNOWN');
 		let expiresAt = moment(passwordReset.get('ExpiresAt'));
 		if (moment().isAfter(expiresAt)) throw new HttpError(410, 'ERR_REQ_TOKEN_EXPIRED');
-		let user = await schema.model('User').findById(passwordReset.get('UserId'));
+		let user = await schema.model('User').findById(passwordReset.get('UserUsername'));
 		let username = user.get('Username');
 		try {
 			UserModel.checkPassword(password, [username]);

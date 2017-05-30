@@ -3,11 +3,14 @@ const Sequelize = require('sequelize');
 module.exports = {
 	define: function (schema) {
 		return schema.define('UserGroup', {
-			UserId: {
-				type: Sequelize.INTEGER
+			UserUsername: {
+				type: Sequelize.STRING,
+				allowNull: false
 			},
 			GroupId: {
-				type: Sequelize.INTEGER
+				type: Sequelize.INTEGER,
+				allowNull: false
+
 			},
 			Prio: {
 				type: Sequelize.INTEGER,

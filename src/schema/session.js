@@ -59,7 +59,6 @@ module.exports = {
 						id: sessionId,
 						expiresIn: options.validFor,
 						issuedAt: iat.unix(),
-						userId: user.get('Id'),
 						username: user.get('Username'),
 						permissions: permissions,
 						secret: secret
@@ -68,7 +67,7 @@ module.exports = {
 						sess: sessionId,
 						iat: iat.unix(),
 						exp: exp.unix(),
-						usr: {id: user.get('Id'), nam: user.get('Username')},
+						usr: user.get('Username'),
 						pbm: {vers: latestPBM.Version, bits: pbm}
 					}, rsaPrivateKey, {algorithm: 'RS256'});
 					this.create({

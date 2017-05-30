@@ -38,7 +38,7 @@ describe("schema/user.js", function () {
 		});
 
 		it('resolves to the expected permission list', async function () {
-			let user = await schema.get().model('User').findOne({where: {Id: 1}});
+			let user = await schema.get().model('User').findById('testman');
 			let permissions = await user.permissions();
 			assert.typeOf(permissions, 'array');
 			assert.deepEqual(permissions, ['InviteUsers', 'ListOrgCustomers']);
@@ -53,7 +53,7 @@ describe("schema/user.js", function () {
 
 		it("loads an object containing the organization specific roles.", async function() {
 			if ( !db ) return this.skip();
-			let user = await schema.get().model('User').findById(1);
+			let user = await schema.get().model('User').findById('testman');
 			let roles = await user.roles();
 			assert.isDefined(roles);
 			assert.deepEqual(roles, ['service', 'admin']);

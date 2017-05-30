@@ -38,10 +38,7 @@ class AuthRegisterRouter extends Router {
 		// eslint-disable-next-line new-cap
 		const router = express.Router();
 		router.post("/", Router.checkBodyField('username', UserModel.checkUsername));
-		router.post("/", Router.checkBodyField('password', (value, req) => {
-			let username = req.body.username;
-			return UserModel.checkPassword(value, [username]);
-		}, {optional: true}));
+		router.post("/", Router.checkBodyField('password', UserModel.checkPassword, {optional: true}));
 		router.post("/", Router.checkBodyField('email', UserModel.checkEmail, {optional: true}));
 		router.post("/", Router.asyncRouter(async function (req, res, next) {
 			const username = req.body.username;

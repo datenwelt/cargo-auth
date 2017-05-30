@@ -99,7 +99,6 @@ describe('server/auth/login.js', function () {
 			assert.typeOf(session, 'object');
 			assert.equal(session.username, 'testman');
 			assert.equal(session.expiresIn, '4h');
-			assert.equal(session.userId, 1);
 			assert.property(session, 'id');
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
@@ -108,14 +107,13 @@ describe('server/auth/login.js', function () {
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
-			assert.strictEqual(session.userId, 1);
 
 			const latestBitmap = await schema.get().model('PermissionBitmap').findLatest();
 			const token = session.token;
 			const publicKey = state.rsa.exportKey('public');
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
-			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
+			assert.deepEqual(payload.usr, 'testman');
 			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 24});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
