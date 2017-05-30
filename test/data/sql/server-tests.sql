@@ -1,17 +1,14 @@
 DELETE FROM GroupPermissions;
 DELETE FROM GroupRoles;
 DELETE FROM Groups;
-DELETE FROM Origins;
 DELETE FROM PasswordResets;
 DELETE FROM PermissionBitmaps;
 DELETE FROM Permissions;
 DELETE FROM RolePermissions;
 DELETE FROM Roles;
 DELETE FROM Sessions;
-DELETE FROM Systems;
 DELETE FROM UserActivations;
 DELETE FROM UserGroups;
-DELETE FROM UserOrigins;
 DELETE FROM UserPermissions;
 DELETE FROM UserRoles;
 DELETE FROM Users;
@@ -48,22 +45,16 @@ INSERT INTO RolePermissions (mode, prio, roleName, permissionName) VALUES('allow
 INSERT INTO RolePermissions (mode, prio, roleName, permissionName) VALUES('allowed', 40, 'service', 'InviteUsers');
 INSERT INTO RolePermissions (mode, prio, roleName, permissionName) VALUES('denied', 50, 'service', 'ManageUsers');
 
-INSERT INTO Origins (Hostname) VALUES('localhost');
-INSERT INTO Origins (Hostname) VALUES('test.cargohub.io');
-
-INSERT INTO Groups (Id, Name, OriginHostname) VALUES(1, 'Service Admin Group', 'localhost');
+INSERT INTO Groups (Id, Name) VALUES(1, 'Service Admin Group');
 INSERT INTO GroupRoles (Prio, GroupId, RoleName) VALUES(10, 1, 'service');
 INSERT INTO GroupPermissions (Mode, Prio, GroupId, PermissionName) VALUES('allowed', 10, 1, 'SystemReboot');
 
 INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(1, 'testman', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 1);
-INSERT INTO UserOrigins (Id, UserId, OriginHostname) VALUES('1@localhost', 1, 'localhost');
-INSERT INTO UserOrigins (Id, UserId, OriginHostname) VALUES('1@test.cargohub.io', 1, 'test.cargohub.io');
-INSERT INTO UserGroups (Prio, GroupId, UserOriginId) VALUES(10, 1, '1@localhost');
-INSERT INTO UserRoles (Prio, UserOriginId, RoleName) VALUES(10, '1@localhost', 'admin');
-INSERT INTO UserPermissions (Mode, Prio, UserOriginId, PermissionName) VALUES('allowed', 10, '1@localhost', 'ListOrgCustomers');
+INSERT INTO UserGroups (Prio, GroupId, UserId) VALUES(10, 1, 1);
+INSERT INTO UserRoles (Prio, UserId, RoleName) VALUES(10, 1, 'admin');
+INSERT INTO UserPermissions (Mode, Prio, UserId, PermissionName) VALUES('allowed', 10, 1, 'ListOrgCustomers');
 
 INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(2, 'testman-inactive', '{SHA1}fb15a1bc444e13e2c58a0a502c74a54106b5a0dc', 'test@testman.de', 0);
 
 INSERT INTO Users (Id, Username, Password, Email, Active) VALUES(3, 'admin', '{SHA1}24b61c4dfdb5b8b5ae50340589be6c97310876c4', 'admin@cargohub.io', 1);
-INSERT INTO UserOrigins(Id, UserId, OriginHostname) VALUES('3@localhost', 3, 'localhost');
 

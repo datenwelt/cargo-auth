@@ -64,7 +64,7 @@ describe('server/auth/login.js', function () {
 	describe('POST /auth/login', function () {
 
 		beforeEach(async function () {
-			db.query('DELETE FROM Sessions');
+			await db.query('DELETE FROM Sessions');
 		});
 
 		afterEach(function () {
@@ -104,8 +104,7 @@ describe('server/auth/login.js', function () {
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
 			assert.property(session, 'permissions');
-			assert.property(session.permissions, 'localhost');
-			assert.deepEqual(session.permissions.localhost, ['InviteUsers', 'ListOrgCustomers']);
+			assert.deepEqual(session.permissions, ['InviteUsers', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
@@ -117,7 +116,7 @@ describe('server/auth/login.js', function () {
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {"localhost": 24, "test.cargohub.io": 0}});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 24});
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "login");
@@ -183,8 +182,8 @@ describe('server/auth/login.js', function () {
 		it('responds with status 405 when not using POST', async function () {
 			// eslint-disable-next-line no-invalid-this
 			if (!app) this.skip();
-			await TestServer.expectErrorResponse(405, undefined,
-				superagent.get(baseURI));
+			// eslint-disable-next-line no-undefined
+			await TestServer.expectErrorResponse(405, undefined, superagent.get(baseURI));
 		});
 	});
 

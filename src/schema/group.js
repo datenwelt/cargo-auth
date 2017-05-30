@@ -13,10 +13,6 @@ module.exports = {
 				type: Sequelize.STRING,
 				allowNull: false,
 				comment: 'Human readable name of the group.'
-			},
-			OriginHostname: {
-				type: Sequelize.STRING,
-				allowNull: false
 			}
 		}, {
 			instanceMethods: {

@@ -50,24 +50,19 @@ class Schema {
 		require('./schema/group').define(sequelize);
 		require('./schema/group-permission').define(sequelize);
 		require('./schema/group-role').define(sequelize);
-		require('./schema/origin').define(sequelize);
 		require('./schema/password-reset').define(sequelize);
 		require('./schema/permission').define(sequelize);
 		require('./schema/permission-bitmap').define(sequelize);
 		require('./schema/role').define(sequelize);
 		require('./schema/role-permission').define(sequelize);
 		require('./schema/session').define(sequelize);
-		require('./schema/system').define(sequelize);
 		require('./schema/user').define(sequelize);
 		require('./schema/user-activation').define(sequelize);
 		require('./schema/user-group').define(sequelize);
 		require('./schema/user-role').define(sequelize);
-		require('./schema/user-origin').define(sequelize);
 		require('./schema/user-permission').define(sequelize);
 
 		const model = sequelize.model.bind(sequelize);
-
-		model('Origin').hasMany(model('Group'));
 
 		model('Role').belongsToMany(model('Permission'), {through: model('RolePermission')});
 
@@ -75,13 +70,9 @@ class Schema {
 		model('Group').belongsToMany(model('Role'), {through: model('GroupRole')});
 
 		model('User').hasMany(model('PasswordReset'));
-		model('User').belongsToMany(model('Origin'), {through: model('UserOrigin')});
-		model('UserOrigin').belongsToMany(model('Group'), {through: model('UserGroup')});
-		model('UserOrigin').belongsToMany(model('Role'), {through: model('UserRole'), foreignKey: 'UserOriginId'});
-		model('UserOrigin').belongsToMany(model('Permission'), {
-			through: model('UserPermission'),
-			foreignKey: 'UserOriginId'
-		});
+		model('User').belongsToMany(model('Group'), {through: model('UserGroup')});
+		model('User').belongsToMany(model('Role'), {through: model('UserRole')});
+		model('User').belongsToMany(model('Permission'), {through: model('UserPermission')});
 	}
 
 	// eslint-disable-next-line class-methods-use-this
@@ -104,14 +95,14 @@ class Schema {
 				limit: listOptions.limit
 			};
 			if (listOptions.orderBy && listOptions.orderBy.length) {
-				if ( _.isString(listOptions.orderBy)) listOptions.orderBy = [listOptions.orderBy];
+				if (_.isString(listOptions.orderBy)) listOptions.orderBy = [listOptions.orderBy];
 				findOptions.order = _.map(listOptions.orderBy, function (orderDef) {
 					let matches = orderDef.match(/^([A-Za-z0-9_]+)(?:,(asc|desc))$/);
-					if ( !matches) throw new HttpError(400, 'ERR_QUERY_ORDER_BY_INVALID');
+					if (!matches) throw new HttpError(400, 'ERR_QUERY_ORDER_BY_INVALID');
 					let fieldname = matches[1];
 					let direction = matches[2];
-					if ( !direction ) direction = 'asc';
-					if ( !_.contains(fieldnames, fieldname)) throw new HttpError(400, 'ERR_QUERY_ORDER_BY_UNKNOWNFIELD');
+					if (!direction) direction = 'asc';
+					if (!_.contains(fieldnames, fieldname)) throw new HttpError(400, 'ERR_QUERY_ORDER_BY_UNKNOWNFIELD');
 					return [changecase.pascalCase(fieldname), direction];
 				});
 			}

@@ -1,4 +1,5 @@
 const crypto = require('crypto');
+const Promise = require('bluebird');
 const Sequelize = require('sequelize');
 const VError = require('verror');
 
@@ -46,28 +47,55 @@ class UserModel {
 			instanceMethods: {
 				permissions: async function () {
 					const userId = this.get('Id');
-					const userOrigins = await this.sequelize.model('UserOrigin').findAll({
-						where: {UserId: userId}
+					let userGroups = await this.sequelize.model('UserGroup').findAll({
+						where: {UserId: userId},
+						order: [['Prio', 'ASC']]
 					});
-					let permissions = {};
-					for (let userOrigin of userOrigins) {
-						let hostname = userOrigin.get('OriginHostname');
-						// eslint-disable-next-line no-await-in-loop
-						permissions[hostname] = await userOrigin.permissions([]);
-					}
+					let groups = await Promise.map(userGroups, async function (userGroup) {
+						let groupId = userGroup.get('GroupId');
+						let group = await this.sequelize.model('Group').findById(groupId);
+						return group;
+					}.bind(this));
+					let permissions = await Promise.reduce(groups, function (memo, group) {
+						return group.permissions(memo);
+					}, []);
+					let userRoles = await this.sequelize.model('UserRole').findAll({
+						where: {UserId: userId},
+						order: [['Prio', 'ASC']]
+					});
+					let roles = await Promise.map(userRoles, function (userRole) {
+						let roleId = userRole.get('RoleName');
+						return this.sequelize.model('Role').findById(roleId);
+					}.bind(this));
+					permissions = await Promise.reduce(roles, function (memo, role) {
+						return role.permissions(memo);
+					}, permissions);
+					const permissionModel = this.sequelize.model('Permission');
+					let userPermissions = await this.sequelize.model('UserPermission').findAll({
+						where: {UserId: userId},
+						order: [['Prio', 'ASC']]
+					});
+					permissions = await Promise.reduce(userPermissions, function (memo, modifier) {
+						return permissionModel.applyPermissions(modifier, memo);
+					}, permissions);
 					return permissions;
 				},
 				roles: async function () {
 					const userId = this.get('Id');
-					const userOrigins = await this.sequelize.model('UserOrigin').findAll({
-						where: {UserId: userId}
+					let groups = await Promise.map(this.sequelize.model('UserGroup').findAll({
+						where: {'UserId': userId}, order: [['Prio', 'ASC']]
+					}), function (userGroup) {
+						return this.sequelize.model('Group').findById(userGroup.get('GroupId'));
+					}.bind(this));
+					let roles = await Promise.reduce(groups, async function (memo, group) {
+						return memo.concat(await group.roles());
+					}, []);
+
+					let p = this.sequelize.model('UserRole').findAll({
+						where: {'UserId': userId}, order: [['Prio', 'ASC']]
 					});
-					let roles = {};
-					for (let userOrigin of userOrigins) {
-						let hostname = userOrigin.get('OriginHostname');
-						let userRoles = await userOrigin.roles();
-						roles[hostname] = userRoles;
-					}
+					let userRoles = await Promise.map(p, (userRole) => userRole.get('RoleName'));
+					roles = roles.concat(userRoles);
 					return roles;
 				}
 			}

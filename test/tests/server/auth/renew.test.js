@@ -104,8 +104,7 @@ describe('server/auth/renew.js', function () {
 			assert.property(session, 'secret');
 			assert.property(session, 'token');
 			assert.property(session, 'permissions');
-			assert.property(session.permissions, 'localhost');
-			assert.deepEqual(session.permissions.localhost, ['InviteUsers', 'ListOrgCustomers']);
+			assert.deepEqual(session.permissions, ['InviteUsers', 'ListOrgCustomers']);
 			assert.strictEqual(session.expiresIn, '4h');
 			assert.isBelow(new Date().getTime(), session.issuedAt * 1000);
 			assert.strictEqual(session.username, 'testman');
@@ -119,7 +118,7 @@ describe('server/auth/renew.js', function () {
 			const payload = jwt.verify(token, publicKey);
 			assert.isDefined(payload);
 			assert.deepEqual(payload.usr, {nam: 'testman', id: 1});
-			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: {"localhost": 24, "test.cargohub.io": 0}});
+			assert.deepEqual(payload.pbm, {vers: latestBitmap.Version, bits: 24 });
 			const eventData = await eventPromise;
 			assert.isDefined(eventData);
 			assert.equal(eventData.event, "login");

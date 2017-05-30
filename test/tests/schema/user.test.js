@@ -40,10 +40,8 @@ describe("schema/user.js", function () {
 		it('resolves to the expected permission list', async function () {
 			let user = await schema.get().model('User').findOne({where: {Id: 1}});
 			let permissions = await user.permissions();
-			assert.property(permissions, 'localhost');
-			assert.property(permissions, 'test.cargohub.io');
-			assert.typeOf(permissions.localhost, 'array');
-			assert.deepEqual(permissions.localhost, ['InviteUsers', 'ListOrgCustomers']);
+			assert.typeOf(permissions, 'array');
+			assert.deepEqual(permissions, ['InviteUsers', 'ListOrgCustomers']);
 		});
 	});
 
@@ -58,7 +56,7 @@ describe("schema/user.js", function () {
 			let user = await schema.get().model('User').findById(1);
 			let roles = await user.roles();
 			assert.isDefined(roles);
-			assert.deepEqual(roles, {'localhost': ['service', 'admin'], 'test.cargohub.io': []});
+			assert.deepEqual(roles, ['service', 'admin']);
 		});
 
 	});

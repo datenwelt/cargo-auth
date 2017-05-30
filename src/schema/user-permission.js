@@ -4,8 +4,8 @@ const Sequelize = require('sequelize');
 module.exports = {
 	define: function (schema) {
 		return schema.define('UserPermission', {
-			UserOriginId: {
-				type: Sequelize.STRING,
+			UserId: {
+				type: Sequelize.INTEGER,
 				primaryKey: true
 			},
 			PermissionName: {
