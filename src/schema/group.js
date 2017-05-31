@@ -1,7 +1,10 @@
 const Sequelize = require('sequelize');
 
-module.exports = {
-	define: function (schema) {
+const Checks = require('@datenwelt/cargo-api').Checks;
+
+class Group {
+
+	static define(schema) {
 		return schema.define('Group', {
 			Id: {
 				type: Sequelize.INTEGER,
@@ -15,6 +18,10 @@ module.exports = {
 				comment: 'Human readable name of the group.'
 			}
 		}, {
+			classMethods: {
+				checkId: Group.checkId,
+				checkName: Group.checkName
+			},
 			instanceMethods: {
 				permissions: async function (permissions) {
 					const groupId = this.get('Id');
@@ -53,4 +60,18 @@ module.exports = {
 			}
 		});
 	}
-};
+
+	static checkId(value) {
+		value = Checks.cast('number', value);
+		return Checks.min(1, value);
+	}
+
+	static checkName(value) {
+		value = Checks.cast('string', value);
+		return Checks.maxLength(255, value);
+	}
+
+}
+
+module.exports = Group;
+
