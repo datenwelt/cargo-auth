@@ -28,7 +28,7 @@ const path = '/groups';
 const paramName = ':id';
 const errorName = 'GROUP';
 
-describe.only(scriptName, function () {
+describe(scriptName, function () {
 
 	let app = null;
 	let config = null;
@@ -249,8 +249,7 @@ describe.only(scriptName, function () {
 		it('responds with 200 when the item does not exist', async function () {
 			let response = null;
 			try {
-				response = await superagent
-					.delete(baseURI + "/4");
+				response = await superagent.delete(baseURI + "/4");
 			} catch (err) {
 				if (err.response) {
 					assert.strictEqual(err.response.status, 200, util.format('Request failed with status code %d: %s', err.response.status, err.response.get('X-Error')));

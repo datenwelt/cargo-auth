@@ -71,6 +71,7 @@ class Schema {
 
 		model('User').hasMany(model('PasswordReset'));
 		model('User').belongsToMany(model('Group'), {through: model('UserGroup')});
+		model('Group').belongsToMany(model('User'), {through: model('UserGroup')});
 		model('User').belongsToMany(model('Role'), {through: model('UserRole')});
 		model('User').belongsToMany(model('Permission'), {through: model('UserPermission')});
 	}
