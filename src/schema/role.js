@@ -38,7 +38,7 @@ class Role {
 		value = Checks.type('string', value).trim();
 		value = Checks.notBlank(value);
 		value = Checks.minLength(3, value);
-		value = Checks.maxLength(255, value);
+		value = Checks.maxLength(25, value);
 		value = Checks.match(/^[a-zA-Z0-9_.\-]+$/, value);
 		return value;
 	}

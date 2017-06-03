@@ -1,8 +1,14 @@
 /* eslint-disable new-cap */
 const Sequelize = require('sequelize');
 
-module.exports = {
-	define: function (schema) {
+const Checks = require('@datenwelt/cargo-api').Checks;
+
+const RoleModel = require('./role');
+const UserModel = require('./user');
+
+class UserRolesModel {
+
+	static define (schema) {
 		return schema.define('UserRole', {
 			UserUsername: {
 				type: Sequelize.STRING,
@@ -16,6 +22,27 @@ module.exports = {
 				type: Sequelize.INTEGER,
 				allowNull: false
 			}
+		}, {
+			classMethods: {
+				checkUserUsername: UserRolesModel.checkUserUsername,
+				checkRoleName: UserRolesModel.checkRoleName,
+				checkPrio: UserRolesModel.checkPrio
+			}
 		});
 	}
-};
+
+	static checkUserUsername(...args) {
+		return UserModel.checkUsername(...args);
+	}
+
+	static checkRoleName(...args) {
+		return RoleModel.checkName(...args);
+	}
+
+	static checkPrio(value) {
+		return Checks.type('number', value);
+	}
+
+}
+
+module.exports = UserRolesModel;

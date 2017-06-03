@@ -21,14 +21,14 @@ const TestConfig = require(Path.join(CWD, 'test/test-utils/test-config'));
 const TestSchema = require(Path.join(CWD, 'test/test-utils/test-schema'));
 const TestServer = require(Path.join(CWD, 'test/test-utils/test-server'));
 
-const TestRouter = require(Path.join(CWD, 'src/server/assets/user-groups'));
 
-const scriptName = 'server/assets/user-groups.js';
-const srcPath = '/users';
-const srcParamName = ':userUsername';
-const dstPath = '/groups';
-const dstParamName = ':groupId';
-const errorName = 'USER_GROUP';
+const TestRouter = require(Path.join(CWD, 'src/server/assets/group-roles'));
+const scriptName = 'server/assets/group-roles.js';
+const srcPath = '/groups';
+const srcParamName = ':groupId';
+const dstPath = '/roles';
+const dstParamName = ':roleName';
+const errorName = 'USER_ROLE';
 
 describe(scriptName, function () {
 
@@ -60,9 +60,17 @@ describe(scriptName, function () {
 
 	beforeEach(async function () {
 		let db = await TestSchema.db();
+		await db.query('DELETE FROM Roles');
 		await db.query('DELETE FROM Groups');
-		await db.query('DELETE FROM Users');
-		await db.query('DELETE FROM UserGroups');
+		await db.query('DELETE FROM GroupRoles');
+		await Promise.map([1, 2, 3], function (id) {
+			let name = 'role-' + id;
+			let description = 'This is test role #' + id;
+			return db.execute("INSERT INTO Roles (Name, Description) VALUES(?,?)", [
+				name,
+				description
+			]);
+		});
 		await Promise.map([1, 2, 3], function (id) {
 			let name = 'group#' + id;
 			return db.execute("INSERT INTO Groups (Id, Name) VALUES(?,?)", [
@@ -70,24 +78,15 @@ describe(scriptName, function () {
 				name
 			]);
 		});
-		await Promise.map([1, 2, 3], function (id) {
-			let username = 'user-' + id;
-			let password = '{SHA1}bdee578ffe5e91e95ad802f67dc377c8c92dabbc';
-			let email = username + "@cargohub.io";
-			let active = true;
-			return db.execute("INSERT INTO Users (Username, Password, Email, Active) VALUES(?,?,?,?)", [
-				username, password, email, active
-			]);
-		});
-		await db.query("INSERT iNTO UserGroups (UserUsername, GroupId, Prio) VALUES ('user-1', 1, 20)");
-		await db.query("INSERT iNTO UserGroups (UserUsername, GroupId, Prio) VALUES ('user-1', 2, 10)");
+		await db.query("INSERT iNTO GroupRoles (GroupId, RoleName, Prio) VALUES (1, 'role-1', 20)");
+		await db.query("INSERT iNTO GroupRoles (GroupId, RoleName, Prio) VALUES (1, 'role-2', 10)");
 	});
 
 	afterEach(async function () {
 		let db = await TestSchema.db();
+		await db.query('DELETE FROM Roles');
 		await db.query('DELETE FROM Groups');
-		await db.query('DELETE FROM Users');
-		await db.query('DELETE FROM UserGroups');
+		await db.query('DELETE FROM GroupRoles');
 	});
 
 
@@ -97,10 +96,10 @@ describe(scriptName, function () {
 			let response = null;
 			try {
 				let uri = new URI(baseURI);
-				uri.segment([srcPath, 'user-1', dstPath]);
+				uri.segment([srcPath, '1', dstPath]);
 				response = await superagent.post(uri.toString())
 					.send({
-						groupId: 3,
+						roleName: 'role-3',
 						prio: 30
 					});
 			} catch (err) {
@@ -111,13 +110,13 @@ describe(scriptName, function () {
 				throw new VError(err);
 			}
 			assert.deepEqual(response.body, {
-				userUsername: 'user-1',
-				groupId: 3,
-				prio: 30,
-				group: {
-					id: 3,
-					name: "group#3"
-				}
+				"groupId": "1",
+				"prio": 30,
+				"role": {
+					"description": "This is test role #3",
+					"name": "role-3",
+				},
+				"roleName": "role-3"
 			});
 		});
 
@@ -128,7 +127,7 @@ describe(scriptName, function () {
 		it('loads the current items as a list', async function () {
 			let resp = null;
 			let uri = new URI(baseURI);
-			uri.segment([srcPath, 'user-1', dstPath]);
+			uri.segment([srcPath, '1', dstPath]);
 			uri.query({
 				offset: 0,
 				limit: 15,
@@ -143,22 +142,22 @@ describe(scriptName, function () {
 			let groups = resp.body;
 			assert.deepEqual(groups, [
 				{
-					"group": {
-						"id": 2,
-						"name": "group#2"
-					},
-					"groupId": 2,
+					"groupId": 1,
 					"prio": 10,
-					"userUsername": "user-1"
+					"role": {
+						"description": "This is test role #2",
+						"name": "role-2"
+					},
+					"roleName": "role-2"
 				},
 				{
-					"group": {
-						"id": 1,
-						"name": "group#1"
-					},
 					"groupId": 1,
 					"prio": 20,
-					"userUsername": "user-1"
+					"role": {
+						"description": "This is test role #1",
+						"name": "role-1"
+					},
+					"roleName": "role-1"
 				}
 			]);
 			assert.strictEqual(resp.get('x-list-offset'), "0");
@@ -175,8 +174,7 @@ describe(scriptName, function () {
 			let response = null;
 			try {
 				let uri = new URI(baseURI);
-				uri.segment([srcPath, 'user-1', dstPath, '1']);
-				let u = uri.toString()
+				uri.segment([srcPath, '1', dstPath, 'role-3']);
 				response = await superagent.delete(uri.toString());
 			} catch (err) {
 				if (err.response) {
@@ -192,7 +190,7 @@ describe(scriptName, function () {
 			let response = null;
 			try {
 				let uri = new URI(baseURI);
-				uri.segment([srcPath, 'user-1', dstPath, '4']);
+				uri.segment([srcPath, '1', dstPath, 'role-4']);
 				response = await superagent.delete(uri.toString());
 			} catch (err) {
 				if (err.response) {

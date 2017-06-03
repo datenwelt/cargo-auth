@@ -87,7 +87,7 @@ class UserGroupsRouter extends Router {
 		let path = format("/%s/:%s/%s", this.sourcePath, this.sourceParamName, this.destinationPath);
 		let predicateName = "check" + changecase.pascalCase(this.sourceParamName);
 		let predicate = sequelize.model(this.modelName)[predicateName];
-		if (!predicate) throw new VError('Missing class method %s() in module %s.', predicate, this.modelName);
+		if (!predicate) throw new VError('Missing class method %s() in module %s.', predicateName, this.modelName);
 		this.app.get(path, Router.checkRequestParameter(this.sourceParamName, predicate));
 		this.app.get(path, Router.createGenericListRouter(async function (listOptions, req) {
 			const sequelize = this.schema.get();

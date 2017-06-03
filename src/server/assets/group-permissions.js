@@ -1,9 +1,9 @@
 const BaseRelationRouter = require('./base-relation');
 
-class UserGroupsRouter extends BaseRelationRouter {
+class GroupPermissionsRouter extends BaseRelationRouter {
 
 	constructor(serverName, options) {
-		super(serverName, 'UserGroup', options);
+		super(serverName, 'GroupPermission', options);
 		options = Object.assign({schema: null}, options);
 		this.schema = options.schema;
 	}
@@ -18,4 +18,4 @@ class UserGroupsRouter extends BaseRelationRouter {
 
 }
 
-module.exports = UserGroupsRouter;
+module.exports = GroupPermissionsRouter;

@@ -21,14 +21,14 @@ const TestConfig = require(Path.join(CWD, 'test/test-utils/test-config'));
 const TestSchema = require(Path.join(CWD, 'test/test-utils/test-schema'));
 const TestServer = require(Path.join(CWD, 'test/test-utils/test-server'));
 
-const TestRouter = require(Path.join(CWD, 'src/server/assets/user-groups'));
 
-const scriptName = 'server/assets/user-groups.js';
+const TestRouter = require(Path.join(CWD, 'src/server/assets/user-permissions'));
+const scriptName = 'server/assets/user-permissions.js';
 const srcPath = '/users';
 const srcParamName = ':userUsername';
-const dstPath = '/groups';
-const dstParamName = ':groupId';
-const errorName = 'USER_GROUP';
+const dstPath = '/permissions';
+const dstParamName = ':permissionName';
+const errorName = 'USER_PERMISSION';
 
 describe(scriptName, function () {
 
@@ -60,14 +60,15 @@ describe(scriptName, function () {
 
 	beforeEach(async function () {
 		let db = await TestSchema.db();
-		await db.query('DELETE FROM Groups');
+		await db.query('DELETE FROM Permissions');
 		await db.query('DELETE FROM Users');
-		await db.query('DELETE FROM UserGroups');
+		await db.query('DELETE FROM UserPermissions');
 		await Promise.map([1, 2, 3], function (id) {
-			let name = 'group#' + id;
-			return db.execute("INSERT INTO Groups (Id, Name) VALUES(?,?)", [
-				id,
-				name
+			let name = 'permission-' + id;
+			let description = 'This is test permission #' + id;
+			return db.execute("INSERT INTO Permissions (Name, Description) VALUES(?,?)", [
+				name,
+				description
 			]);
 		});
 		await Promise.map([1, 2, 3], function (id) {
@@ -79,15 +80,15 @@ describe(scriptName, function () {
 				username, password, email, active
 			]);
 		});
-		await db.query("INSERT iNTO UserGroups (UserUsername, GroupId, Prio) VALUES ('user-1', 1, 20)");
-		await db.query("INSERT iNTO UserGroups (UserUsername, GroupId, Prio) VALUES ('user-1', 2, 10)");
+		await db.query("INSERT iNTO UserPermissions (UserUsername, PermissionName, Mode, Prio) VALUES ('user-1', 'permission-1', 'allowed',  20)");
+		await db.query("INSERT iNTO UserPermissions (UserUsername, PermissionName, Mode, Prio) VALUES ('user-1', 'permission-2', 'denied', 10)");
 	});
 
 	afterEach(async function () {
 		let db = await TestSchema.db();
-		await db.query('DELETE FROM Groups');
+		await db.query('DELETE FROM Permissions');
 		await db.query('DELETE FROM Users');
-		await db.query('DELETE FROM UserGroups');
+		await db.query('DELETE FROM UserPermissions');
 	});
 
 
@@ -100,7 +101,8 @@ describe(scriptName, function () {
 				uri.segment([srcPath, 'user-1', dstPath]);
 				response = await superagent.post(uri.toString())
 					.send({
-						groupId: 3,
+						permissionName: 'permission-3',
+						mode: 'allowed',
 						prio: 30
 					});
 			} catch (err) {
@@ -112,11 +114,12 @@ describe(scriptName, function () {
 			}
 			assert.deepEqual(response.body, {
 				userUsername: 'user-1',
-				groupId: 3,
+				permissionName: 'permission-3',
 				prio: 30,
-				group: {
-					id: 3,
-					name: "group#3"
+				mode: 'allowed',
+				permission: {
+					name: 'permission-3',
+					description: 'This is test permission #3'
 				}
 			});
 		});
@@ -143,20 +146,22 @@ describe(scriptName, function () {
 			let groups = resp.body;
 			assert.deepEqual(groups, [
 				{
-					"group": {
-						"id": 2,
-						"name": "group#2"
+					"mode": "denied",
+					"permission": {
+						"description": "This is test permission #2",
+						"name": "permission-2"
 					},
-					"groupId": 2,
+					"permissionName": "permission-2",
 					"prio": 10,
-					"userUsername": "user-1"
+					"userUsername": "user-1",
 				},
 				{
-					"group": {
-						"id": 1,
-						"name": "group#1"
+					"mode": "allowed",
+					"permission": {
+						"description": "This is test permission #1",
+						"name": "permission-1",
 					},
-					"groupId": 1,
+					"permissionName": "permission-1",
 					"prio": 20,
 					"userUsername": "user-1"
 				}
@@ -175,8 +180,7 @@ describe(scriptName, function () {
 			let response = null;
 			try {
 				let uri = new URI(baseURI);
-				uri.segment([srcPath, 'user-1', dstPath, '1']);
-				let u = uri.toString()
+				uri.segment([srcPath, 'user-1', dstPath, 'permission-2']);
 				response = await superagent.delete(uri.toString());
 			} catch (err) {
 				if (err.response) {
@@ -192,7 +196,7 @@ describe(scriptName, function () {
 			let response = null;
 			try {
 				let uri = new URI(baseURI);
-				uri.segment([srcPath, 'user-1', dstPath, '4']);
+				uri.segment([srcPath, 'user-1', dstPath, 'permission-4']);
 				response = await superagent.delete(uri.toString());
 			} catch (err) {
 				if (err.response) {
