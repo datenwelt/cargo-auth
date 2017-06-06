@@ -30,7 +30,7 @@ const dstPath = '/permissions';
 const dstParamName = ':permissionName';
 const errorName = 'GROUP_PERMISSION';
 
-describe.only(scriptName, function () {
+describe(scriptName, function () {
 
 	let app = null;
 	let config = null;
