@@ -52,6 +52,7 @@ class AuthLoginRouter extends Router {
 			const username = body.username;
 			const password = body.password;
 				const session = await this.login(username, password);
+				req.username = session.username;
 				res.status(200).send(session);
 				next();
 		}.bind(this)));
@@ -80,7 +81,7 @@ class AuthLoginRouter extends Router {
 		let matches = (user.get('Password') || "").match(/^\{(SHA1|MD5|SHA256)\}(.+$)/);
 		if (!matches) throw new VError('Unable to perform login for user "%s", password value does not start with "{SHA1|MD5|SHA256}"', username);
 		const hash = crypto.createHash(matches[1]);
-		hash.update(password);
+		hash.update(password, 'utf8');
 		const hashed = hash.digest('hex');
 		if (hashed.toLowerCase() !== matches[2].toLowerCase()) {
 			throw new HttpError(403, 'ERR_REQ_LOGIN_FAILED');

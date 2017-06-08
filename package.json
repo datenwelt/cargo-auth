@@ -28,7 +28,7 @@
     "superagent": "^3.5.2"
   },
   "dependencies": {
-    "@datenwelt/cargo-api": "datenwelt/cargo-api",
+    "@datenwelt/cargo-api": "github:datenwelt/cargo-api",
     "bluebird": "^3.5.0",
     "body-parser": "^1.17.1",
     "bunyan": "^1.8.10",
@@ -42,6 +42,7 @@
     "mailparser": "^2.0.5",
     "moment": "^2.18.1",
     "ms": "github:zeit/ms",
+    "mysql": "^2.13.0",
     "mysql2": "^1.2.0",
     "node-rsa": "^0.4.2",
     "nodemailer": "^4.0.1",

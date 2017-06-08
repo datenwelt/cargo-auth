@@ -52,6 +52,8 @@ module.exports = {
 					if (!latestPBM) {
 						latestPBM = await schema.model('PermissionBitmap').createLatest();
 					}
+					const roles = await user.roles();
+
 					let pbm = latestPBM.permissionsToBitmap(permissions);
 					const iat = moment();
 					const exp = iat.add(ms(options.validFor), 'ms');
@@ -61,6 +63,7 @@ module.exports = {
 						issuedAt: iat.unix(),
 						username: user.get('Username'),
 						permissions: permissions,
+						roles: roles,
 						secret: secret
 					};
 					session.token = await jwt.signAsync({
